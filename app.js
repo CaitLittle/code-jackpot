@@ -430,6 +430,8 @@ document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
 
 // ---------- Start ----------
 if(!S.exam){S.exam="06A";applyLang();pickExam(true);}else applyLang();
+// Leaderboard opens first
+loadLB(true);LB.poll=setInterval(()=>loadLB(true),60000);
 save();
 if("serviceWorker" in navigator&&location.protocol==="https:"){navigator.serviceWorker.register("sw.js").catch(()=>{});}
 })();

@@ -164,13 +164,13 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bot
   <div class="lvltxt" id="lvltxt"></div>
 
   <div class="tabs">
-    <button data-tab="slots" class="on" data-t="tabSlots"></button>
+    <button data-tab="leaders" class="on" data-t="tabLeaders"></button>
+    <button data-tab="slots" data-t="tabSlots"></button>
     <button data-tab="board" data-t="tabBoard"></button>
-    <button data-tab="leaders" data-t="tabLeaders"></button>
     <button data-tab="stats" data-t="tabStats"></button>
   </div>
 
-  <section id="slots" class="on">
+  <section id="slots">
     <div class="machine">
       <div class="marquee" data-t="marquee"></div>
       <div class="reels">
@@ -194,7 +194,7 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bot
     <div class="owned" id="ownedTxt"></div>
   </section>
 
-  <section id="leaders">
+  <section id="leaders" class="on">
     <div class="card"><h3 id="lbTitle"></h3>
       <div class="lbtoggle"><button data-period="week" class="on" data-t="week"></button><button data-period="all" data-t="allTime"></button></div>
       <div class="lbsort"><button data-sort="coins" class="on" data-t="sortCoins"></button><button data-sort="focus" id="sortFocus"></button><button data-sort="acc" data-t="sortAcc"></button></div>
