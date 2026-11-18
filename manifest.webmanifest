@@ -1,0 +1,15 @@
+{
+  "name": "Code Jackpot – Electrical Exam Study Game",
+  "short_name": "Code Jackpot",
+  "description": "Washington electrical exam study game: NEC, theory, load calcs and Washington law, in English and Spanish.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0d1326",
+  "theme_color": "#0d1326",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
