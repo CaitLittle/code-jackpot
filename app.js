@@ -60,6 +60,10 @@ en:{
   lbErr:"Can't reach the leaderboard right now. Check your connection — your progress is saved.",
   lbNeedNick:"Set a nickname below to show up on the leaderboard.",saved:"✔ Saved",
   verEn:"Ver en inglés",hideEn:"Hide English",
+  mission:"<b>Daily mission:</b> {s}/{sn} 🎰 spins + {r}/{rn} 🎲 rolls → <b>+10 spins</b>",missionDone:"<b>✅ Daily mission done!</b> Come back tomorrow for a new one.",missionToast:"🎯 Daily mission complete! +10 spins",
+  toBoardT:"Time to hit the Board!",toBoardP:"You've been spinning — now go build up your topics. <b>Your next roll pays 2×.</b>",toBoardGo:"🎲 Go to the Board",
+  toSlotsT:"Back to the Slots!",toSlotsP:"Nice moves. Time for a quick spin — <b>your next spin is a guaranteed match (2×).</b>",toSlotsGo:"🎰 Go to the Slots",
+  stay:"Keep playing here",boardBoostOn:"🔥 Next roll pays 2×",slotBoostOn:"🔥 Next spin is a guaranteed match",boostTag:"BONUS",
   sheetTitle:"🧮 Load calc cheat sheet (2026 NEC, dwelling, standard method)",
   sheetIntro:"Load calcs are where most people lose points, so they come up more often. Work every problem in this order:",
   sheetSteps:"<li><b>General lighting:</b> sq ft × <b>2 VA</b> (120.41) — it was 3 VA in the 2023 NEC</li><li><b>Add</b> 1,500 VA per small-appliance circuit (min. 2) + 1,500 VA laundry (120.52)</li><li><b>Demand factor:</b> first 3,000 VA at 100%, next up to 120,000 VA at 35%, rest at 25% (Table 120.45)</li><li><b>Fastened appliances:</b> 4 or more → 75% (120.53)</li><li><b>Dryer:</b> 5,000 W or nameplate, whichever is larger (120.54)</li><li><b>Range:</b> Table 120.55 Col. C — 8 kW up to 12 kW, +5% per kW over 12</li><li><b>Heat vs. A/C:</b> count only the larger</li><li><b>Largest motor:</b> add 25% (430.24)</li><li><b>Amps:</b> total VA ÷ 240 V (single-phase) or ÷ (V × 1.732) (three-phase)</li><li><b>Optional method:</b> first <b>8 kVA</b> at 100%, rest at 40% (120.82) — it was 10 kVA in 2023</li>",
@@ -100,6 +104,10 @@ es:{
   lbErr:"No se puede conectar con la tabla ahora. Revisa tu conexión — tu progreso está guardado.",
   lbNeedNick:"Escribe un apodo abajo para aparecer en la tabla.",saved:"✔ Guardado",
   verEn:"Ver en inglés",hideEn:"Ocultar inglés",
+  mission:"<b>Misión diaria:</b> {s}/{sn} 🎰 giros + {r}/{rn} 🎲 tiros → <b>+10 giros</b>",missionDone:"<b>✅ ¡Misión diaria cumplida!</b> Regresa mañana por otra.",missionToast:"🎯 ¡Misión diaria cumplida! +10 giros",
+  toBoardT:"¡Hora de ir al Tablero!",toBoardP:"Ya giraste bastante — ahora ve a construir tus temas. <b>Tu próximo tiro paga 2×.</b>",toBoardGo:"🎲 Ir al Tablero",
+  toSlotsT:"¡De vuelta a la Máquina!",toSlotsP:"Buenas jugadas. Hora de un giro rápido — <b>tu próximo giro es un par garantizado (2×).</b>",toSlotsGo:"🎰 Ir a la Máquina",
+  stay:"Seguir jugando aquí",boardBoostOn:"🔥 El próximo tiro paga 2×",slotBoostOn:"🔥 El próximo giro es un par garantizado",boostTag:"BONO",
   sheetTitle:"🧮 Guía rápida de cálculo de carga (NEC 2026, vivienda, método estándar)",
   sheetIntro:"El cálculo de carga es donde más puntos se pierden, por eso aparece más seguido. Resuelve cada problema en este orden:",
   sheetSteps:"<li><b>Alumbrado general:</b> pies² × <b>2 VA</b> (120.41) — era 3 VA en el NEC 2023</li><li><b>Suma</b> 1,500 VA por circuito de pequeños electrodomésticos (mín. 2) + 1,500 VA de lavandería (120.52)</li><li><b>Factor de demanda:</b> primeros 3,000 VA al 100%, hasta 120,000 VA al 35%, el resto al 25% (Tabla 120.45)</li><li><b>Electrodomésticos fijos:</b> 4 o más → 75% (120.53)</li><li><b>Secadora:</b> 5,000 W o la placa, lo que sea mayor (120.54)</li><li><b>Estufa:</b> Tabla 120.55 Col. C — 8 kW hasta 12 kW, +5% por cada kW sobre 12</li><li><b>Calefacción vs. A/C:</b> cuenta solo la mayor</li><li><b>Motor más grande:</b> suma 25% (430.24)</li><li><b>Amperios:</b> VA total ÷ 240 V (monofásico) o ÷ (V × 1.732) (trifásico)</li><li><b>Método opcional:</b> primeros <b>8 kVA</b> al 100%, el resto al 40% (120.82) — era 10 kVA en 2023</li>",
@@ -156,6 +164,7 @@ function applyLang(){
   buildBoard();
   if($("stats").classList.contains("on"))stats();
   renderLB();
+  renderGuide();
   hud();
 }
 document.querySelectorAll(".langbar button").forEach(b=>b.onclick=()=>{S.lang=b.dataset.lang;save();applyLang();});
@@ -246,6 +255,43 @@ function ask(idx,mult,label,onDone,practice){
 }
 function addCoins(n){const X=E();X.coins+=n;X.week.coins+=n;}
 
+// ---------- Guide: daily mission + nudges between Slots and Board ----------
+const SPINS_PER_TURN=5,ROLLS_PER_TURN=4,MISSION_SPINS=5,MISSION_ROLLS=4;
+function G(){const d=new Date().toDateString();if(!S.guide)S.guide={n:0,next:"",boardBoost:false,slotBoost:false};if(!S.guide.day||S.guide.day.d!==d)S.guide.day={d,spins:0,rolls:0,done:false};return S.guide;}
+function renderGuide(){
+  const g=G(),m=g.day;
+  const html=m.done?T("missionDone"):T("mission",{s:Math.min(m.spins,MISSION_SPINS),sn:MISSION_SPINS,r:Math.min(m.rolls,MISSION_ROLLS),rn:MISSION_ROLLS});
+  const pct=m.done?100:Math.round(100*(Math.min(m.spins,MISSION_SPINS)+Math.min(m.rolls,MISSION_ROLLS))/(MISSION_SPINS+MISSION_ROLLS));
+  ["missionS","missionB"].forEach(id=>{const el=$(id);if(el)el.innerHTML='<span>🎯</span><div class="mt">'+html+'<div class="mp"><i style="width:'+pct+'%"></i></div></div>';});
+  $("slotBoost").textContent=T("slotBoostOn");$("slotBoost").classList.toggle("on",!!g.slotBoost);
+  $("boardBoost").textContent=T("boardBoostOn");$("boardBoost").classList.toggle("on",!!g.boardBoost);
+  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("next",b.dataset.tab===g.next&&!b.classList.contains("on")));
+}
+function checkMission(){const g=G(),m=g.day;if(!m.done&&m.spins>=MISSION_SPINS&&m.rolls>=MISSION_ROLLS){m.done=true;S.spins+=10;toast(T("missionToast"),3000);burst("🎯");}}
+function goTab(t){const b=document.querySelector('.tabs button[data-tab="'+t+'"]');if(b)b.click();}
+function nudge(to){
+  const g=G();g.n=0;g.next=to;
+  if(to==="board")g.boardBoost=true;else g.slotBoost=true;
+  save();renderGuide();
+  const sh=$("sheet");sh.classList.remove("showen");
+  sh.innerHTML='<div class="nudge"><div class="big"></div><div class="qtext" style="margin:0 0 6px"></div><div class="note" style="font-size:14px" id="nP"></div><button class="bigbtn" id="nGo"></button><button class="ghost" id="nStay"></button></div>';
+  sh.querySelector(".big").textContent=to==="board"?"🎲":"🎰";
+  sh.querySelector(".qtext").textContent=T(to==="board"?"toBoardT":"toSlotsT");
+  $("nP").innerHTML=T(to==="board"?"toBoardP":"toSlotsP");
+  $("nGo").textContent=T(to==="board"?"toBoardGo":"toSlotsGo");$("nStay").textContent=T("stay");
+  $("nGo").onclick=()=>{$("modal").classList.remove("on");goTab(to);};
+  $("nStay").onclick=()=>{$("modal").classList.remove("on");};
+  $("modal").classList.add("on");
+}
+function countTurn(kind){ // kind: "slots" | "board"
+  const g=G();
+  if(kind==="slots"){g.day.spins++;}else{g.day.rolls++;}
+  if(g.next===kind)g.next="";
+  if(g.lastKind!==kind){g.lastKind=kind;g.n=0;}
+  g.n++;checkMission();save();renderGuide();
+  return g.n>=(kind==="slots"?SPINS_PER_TURN:ROLLS_PER_TURN);
+}
+
 // ---------- Slots ----------
 let reelState=["theory","general","ground"];
 function syms(){const c=examCats();return c.concat([focus(),focus(),"cash"]);}
@@ -257,6 +303,7 @@ $("spinBtn").onclick=()=>{
   const SY=syms();const rnd=()=>SY[Math.floor(Math.random()*SY.length)];
   const res=[rnd(),rnd(),rnd()];
   if(Math.random()<0.25)res[2]=res[Math.floor(Math.random()*2)];
+  const g=G();if(g.slotBoost){g.slotBoost=false;if(res[0]==="cash")res[0]=focus();res[1]=res[0];renderGuide();}
   [0,1,2].forEach(i=>{$("r"+i).classList.remove("win");$("r"+i).classList.add("spin");});
   const tick=setInterval(()=>[0,1,2].forEach(i=>{if($("r"+i).classList.contains("spin"))setReel(i,rnd());}),70);
   [0,1,2].forEach(i=>setTimeout(()=>{$("r"+i).classList.remove("spin");setReel(i,res[i]);if(i===2){clearInterval(tick);resolve(res);}},700+i*450));
@@ -265,12 +312,13 @@ function resolve(res){
   spinning=false;
   const cnt={};res.forEach(k=>cnt[k]=(cnt[k]||0)+1);
   const top=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0],n=cnt[top];
-  if(top==="cash"&&n===3){[0,1,2].forEach(i=>$("r"+i).classList.add("win"));addCoins(500);save();hud();$("slotMsg").textContent=T("cashJ");burst("💰");burst("💰");return;}
+  if(top==="cash"&&n===3){[0,1,2].forEach(i=>$("r"+i).classList.add("win"));addCoins(500);save();hud();$("slotMsg").textContent=T("cashJ");burst("💰");burst("💰");if(countTurn("slots"))setTimeout(()=>nudge("board"),900);return;}
   let cat,mult,label;
   if(n>=2&&top!=="cash"){cat=top;mult=n;label=n===3?T("jack3"):"2×";res.forEach((k,i)=>{if(k===top)$("r"+i).classList.add("win");});}
   else{const ec=examCats();cat=res[1]==="cash"?ec[Math.floor(Math.random()*ec.length)]:res[1];mult=1;label="1×";}
   $("slotMsg").textContent=(n===3?T("jackpot"):n===2?T("match"):"")+cn(cat)+" · "+label;
-  setTimeout(()=>ask(pick(cat),mult,label,()=>{$("slotMsg").textContent=S.spins>0?T("spinAgain"):T("outSpins");}),n>=2?600:300);
+  const turnUp=countTurn("slots");
+  setTimeout(()=>ask(pick(cat),mult,label,()=>{$("slotMsg").textContent=S.spins>0?T("spinAgain"):T("outSpins");if(turnUp)setTimeout(()=>nudge("board"),250);}),n>=2?600:300);
 }
 $("practiceBtn").onclick=()=>ask(pick(),1,"",null,true);
 $("focusBtn").onclick=()=>{if(S.spins<=0)return;S.spins--;save();hud();ask(pick(focus()),2,T("tag_"+focus()),()=>{$("slotMsg").textContent=S.spins>0?T("spinAgain"):T("outSpins");});};
@@ -327,8 +375,12 @@ function move(steps,dbl,a,b){
   },160);
 }
 function land(dbl){
-  const X=E(),s=SP[X.pos];const done=()=>{rolling=false;save();buildBoard();};
-  const mult=dbl?2:1;
+  const X=E(),s=SP[X.pos];
+  const g=G();const boosted=!!g.boardBoost;g.boardBoost=false;
+  const turnUp=countTurn("board");
+  const done=()=>{rolling=false;save();buildBoard();if(turnUp)setTimeout(()=>nudge("slots"),250);};
+  const mult=(dbl?2:1)*(boosted?2:1);
+  if(boosted)burst("🔥");
   if(dbl)toast(T("doubles"));
   if(s.t==="go"){S.spins+=3;setBoardMsg(T("landGo"));done();return;}
   if(s.t==="bonus"){addCoins(200);burst("🎁");setBoardMsg(T("landBonus"));done();return;}
@@ -423,6 +475,7 @@ document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
   document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));
   document.querySelectorAll("section").forEach(s=>s.classList.toggle("on",s.id===b.dataset.tab));
   clearInterval(LB.poll);
+  renderGuide();
   if(b.dataset.tab==="board")buildBoard();
   if(b.dataset.tab==="stats")stats();
   if(b.dataset.tab==="leaders"){loadLB(false);LB.poll=setInterval(()=>loadLB(true),60000);}

@@ -143,6 +143,18 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bot
 .lbtoggle button.on{background:var(--gold);color:#2a1a00;border-color:transparent}
 .lbsort button.on{background:var(--volt);color:#04202a;border-color:transparent}
 .sheetrow{margin-top:10px}
+.mission{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 10px;margin-bottom:10px;font-size:12px;display:flex;align-items:center;gap:8px}
+.mission b{color:var(--gold)}
+.mission .mt{flex:1}
+.mission .mp{height:6px;background:#0a0f20;border-radius:4px;overflow:hidden;margin-top:4px}
+.mission .mp i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--good));width:0;transition:width .4s}
+.tabs button.next{position:relative}
+.tabs button.next::after{content:"";position:absolute;top:5px;right:7px;width:9px;height:9px;border-radius:50%;background:var(--bad);box-shadow:0 0 0 0 var(--bad);animation:ping 1.2s infinite}
+@keyframes ping{0%{box-shadow:0 0 0 0 #ff5a6eaa}100%{box-shadow:0 0 0 8px #ff5a6e00}}
+.boost{display:none;text-align:center;font-weight:800;color:var(--good);margin-top:8px;font-size:13px}
+.boost.on{display:block}
+.nudge{text-align:center}
+.nudge .big{font-size:54px;line-height:1;margin:4px 0 8px}
 </style>
 </head>
 <body>
@@ -171,6 +183,7 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bot
   </div>
 
   <section id="slots">
+    <div class="mission" id="missionS"></div>
     <div class="machine">
       <div class="marquee" data-t="marquee"></div>
       <div class="reels">
@@ -180,6 +193,7 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bot
       </div>
       <button class="bigbtn" id="spinBtn" data-t="spin"></button>
       <div class="msg" id="slotMsg"></div>
+      <div class="boost" id="slotBoost"></div>
     </div>
     <button class="calcbtn" id="focusBtn"></button>
     <button class="ghost" id="practiceBtn" data-t="practice"></button>
@@ -190,7 +204,9 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bot
   </section>
 
   <section id="board">
+    <div class="mission" id="missionB"></div>
     <div class="board" id="boardGrid"></div>
+    <div class="boost" id="boardBoost"></div>
     <div class="owned" id="ownedTxt"></div>
   </section>
 
