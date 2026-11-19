@@ -124,7 +124,7 @@ CK.forEach(c=>{S.cat[c]=S.cat[c]||{r:0,t:0};});
 if(!S.lang)S.lang=((navigator.language||"en").toLowerCase().indexOf("es")===0)?"es":"en";
 if(!S.pid)S.pid=(Date.now().toString(36)+Math.random().toString(36).slice(2,10));
 function E(){const k=S.exam||"06A";if(!S.ex[k])S.ex[k]={coins:0,right:0,total:0,focusR:0,focusT:0,own:{},prog:{},pos:0,week:{k:"",coins:0,right:0,total:0,focusR:0}};const x=S.ex[k];const wk=weekKey();if(x.week.k!==wk)x.week={k:wk,coins:0,right:0,total:0,focusR:0};return x;}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}queuePush();}
+function save(){try{checkBadges();}catch(e){}try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}queuePush();}
 function weekKey(d){d=d?new Date(d):new Date();const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const day=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-day);const y=t.getUTCFullYear();const w=Math.ceil(((t-Date.UTC(y,0,1))/864e5+1)/7);return y+"-W"+(w<10?"0":"")+w;}
 
 const $=id=>document.getElementById(id);
@@ -133,7 +133,9 @@ const cn=c=>CATS[c][S.lang];
 const cs=c=>CATS[c]["s"+S.lang];
 const exName=k=>EXAMS[k][S.lang];
 const focus=()=>EXAMS[S.exam||"06A"].focus;
-function toast(t,ms){const el=$("toast");el.textContent=t;el.style.display="block";clearTimeout(toast._t);toast._t=setTimeout(()=>el.style.display="none",ms||2200);}
+const toastQ=[];let toastOn=false;
+function toast(t,ms){toastQ.push([t,ms||2200]);if(!toastOn)nextToast();}
+function nextToast(){const el=$("toast");const n=toastQ.shift();if(!n){toastOn=false;el.style.display="none";return;}toastOn=true;el.textContent=n[0];el.style.display="block";setTimeout(nextToast,n[1]);}
 function burst(txt){const b=document.createElement("div");b.className="burst";b.textContent=txt;b.style.left=(40+Math.random()*50)+"%";b.style.top="45%";document.body.appendChild(b);setTimeout(()=>b.remove(),1000);}
 function qText(i,lang){
   const q=QB[i];
@@ -190,12 +192,13 @@ $("examBtn").onclick=()=>pickExam(false);
 function level(){let l=1,need=300,x=S.xp;while(x>=need){x-=need;l++;need=Math.round(need*1.25);}return {l,x,need};}
 function hud(){
   const x=E();
-  $("coins").textContent=x.coins.toLocaleString();
+  $("coins").textContent=wallet().toLocaleString();
   $("spins").textContent=S.spins;
   $("streak").textContent=S.streak+(S.streak>=3?"🔥":"");
   $("acc").textContent=x.total?Math.round(100*x.right/x.total)+"%":"–";
   const L=level();$("lvlbar").style.width=(100*L.x/L.need)+"%";
-  $("lvltxt").textContent=T("level")+" "+L.l+" · "+L.x+"/"+L.need+" "+T("xp")+" · "+T("best")+" "+S.best;
+  $("lvltxt").textContent=RANK_E[rankIdx()]+" "+rankName(rankIdx())+" · "+T("level")+" "+L.l+" · "+L.x+"/"+L.need+" "+T("xp")+" · "+T("best")+" "+S.best;
+  if($("board")&&$("board").classList.contains("on")){renderBuild();}
   $("spinBtn").disabled=S.spins<=0;$("focusBtn").disabled=S.spins<=0;
   const rb=$("rollBtn");if(rb)rb.disabled=S.spins<=0;
 }
@@ -232,9 +235,11 @@ function ask(idx,mult,label,onDone,practice,noLink){
   opts.forEach(o=>{const b=document.createElement("button");b.className="opt";const s1=document.createElement("span");s1.textContent=o.t;b.appendChild(s1);
     if(S.lang==="es"){const s2=document.createElement("div");s2.className="entext";s2.textContent=en.a[o.i];b.appendChild(s2);}
     b.onclick=()=>choose(o,b);box.appendChild(b);});
+  const pbar=powerBar(idx,opts,box,sh);
   $("modal").classList.add("on");sh.scrollTop=0;
   function choose(o,btn){
     [...box.children].forEach((b,i)=>{b.disabled=true;if(opts[i].ok)b.classList.add("right");});
+    pbar.querySelectorAll("button").forEach(b=>b.disabled=true);
     const s=S.qs[idx]=S.qs[idx]||{r:0,w:0};const X=E(),W=X.week,isF=q.c===focus();
     S.cat[q.c].t++;X.total++;W.total++;if(isF)X.focusT++;
     let gained=0;
@@ -246,7 +251,7 @@ function ask(idx,mult,label,onDone,practice,noLink){
       X.coins+=gained;W.coins+=gained;S.xp+=practice?10:Math.round(20*mult);S.spins++;
       $("res").textContent=practice?T("correctSpin"):T("correctCoins",{n:gained});$("res").className="result g";burst("💰");
     }else{
-      s.w++;btn.classList.add("wrong");S.streak=0;S.xp+=5;$("res").textContent=T("wrong");$("res").className="result b";
+      s.w++;btn.classList.add("wrong");if((S.shield||0)>0&&S.streak>0){S.shield--;toast(T("shieldUsed"),2500);}else S.streak=0;S.xp+=5;$("res").textContent=T("wrong");$("res").className="result b";
       const lid=CAT_LESSON[q.c];
       if(!noLink&&lid&&findLesson(lid)){const rb=document.createElement("button");rb.className="ghost";rb.textContent=T("reviewLesson");
         rb.onclick=()=>{$("modal").classList.remove("on");if(onDone)onDone(false,0);setTimeout(()=>openLesson(lid),200);};$("cont").after(rb);}
@@ -270,9 +275,10 @@ function renderGuide(){
   $("slotBoost").textContent=T("slotBoostOn");$("slotBoost").classList.toggle("on",!!g.slotBoost);
   $("boardBoost").textContent=T("boardBoostOn");$("boardBoost").classList.toggle("on",!!g.boardBoost);
   const noLessons=!Object.keys(S.lessons||{}).length;
-  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("next",(b.dataset.tab===g.next||(b.dataset.tab==="learn"&&noLessons))&&!b.classList.contains("on")));
+  let afford=false;try{afford=canAfford();}catch(e){}
+  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("next",(b.dataset.tab===g.next||(b.dataset.tab==="learn"&&noLessons)||(b.dataset.tab==="board"&&afford))&&!b.classList.contains("on")));
 }
-function checkMission(){const g=G(),m=g.day;if(!m.done&&m.spins>=MISSION_SPINS&&m.rolls>=MISSION_ROLLS){m.done=true;S.spins+=10;toast(T("missionToast"),3000);burst("🎯");}}
+function checkMission(){const g=G(),m=g.day;if(!m.done&&m.spins>=MISSION_SPINS&&m.rolls>=MISSION_ROLLS){m.done=true;S.spins+=10;S.missions=(S.missions||0)+1;toast(T("missionToast"),3000);burst("🎯");}}
 function goTab(t){const b=document.querySelector('.tabs button[data-tab="'+t+'"]');if(b)b.click();}
 function nudge(to){
   const g=G();g.n=0;g.next=to;
@@ -346,8 +352,9 @@ function buildBoard(){
     const d=document.createElement("div");const rc=coord(i);
     d.className="cell"+(s.t!=="cat"?" special":"")+(s.t==="cat"&&X.own[s.c]?" own":"");
     d.style.gridRow=rc[0];d.style.gridColumn=rc[1];
-    d.innerHTML='<div class="e"></div><div class="n"></div>'+(i===X.pos?'<div class="tok">⛑️</div>':"");
+    d.innerHTML='<div class="e"></div><div class="n"></div>'+(i===X.pos?'<div class="tok"></div>':"");
     d.querySelector(".e").textContent=s.e;d.querySelector(".n").textContent=s.t==="cat"?cs(s.c):T(s.t);
+    if(i===X.pos)d.querySelector(".tok").textContent=myToken();
     g.appendChild(d);
   });
   const ctr=document.createElement("div");ctr.className="center";
@@ -403,6 +410,8 @@ function land(dbl){
 
 // ---------- Stats ----------
 function stats(){
+  renderLook();
+  renderBadges();
   const ec=examCats();
   $("catBars").innerHTML="";
   ec.forEach(c=>{const s=S.cat[c],p=s.t?Math.round(100*s.r/s.t):0,col=!s.t?"#444":p>=70?"var(--good)":p>=50?"var(--gold)":"var(--bad)";
@@ -430,7 +439,7 @@ const URL_=(typeof CJ_CONFIG==="object"&&CJ_CONFIG.sheetUrl)||"";
 const LB={rows:[],period:"week",sort:"coins",status:URL_?"loading":"off",lastSent:"",timer:null,loadedAt:0,poll:null};
 function topicsStr(){return examCats().filter(c=>S.cat[c].t>0).map(c=>c+" "+S.cat[c].r+"/"+S.cat[c].t).join(", ");}
 function queuePush(){if(!URL_)return;clearTimeout(LB.timer);LB.timer=setTimeout(pushScore,4000);}
-function payload(){const X=E(),W=X.week;return {pid:S.pid,nick:(S.nick||"").slice(0,20),exam:S.exam||"06A",coins:X.coins,right:X.right,total:X.total,focusR:X.focusR,best:S.best,wk:W.k,wcoins:W.coins,wright:W.right,wtotal:W.total,wfocusR:W.focusR,topics:topicsStr(),lang:S.lang,ready:(function(){try{const r=readiness();return r.need?"":r.pct;}catch(e){return "";}})(),lessons:Object.keys(S.lessons||{}).length};}
+function payload(){const X=E(),W=X.week;return {pid:S.pid,nick:(S.nick||"").slice(0,20),exam:S.exam||"06A",coins:X.coins,right:X.right,total:X.total,focusR:X.focusR,best:S.best,wk:W.k,wcoins:W.coins,wright:W.right,wtotal:W.total,wfocusR:W.focusR,topics:topicsStr(),lang:S.lang,ready:(function(){try{const r=readiness();return r.need?"":r.pct;}catch(e){return "";}})(),lessons:Object.keys(S.lessons||{}).length,rank:rankIdx()};}
 function pushScore(){
   if(!URL_)return;const p=payload();if(p.total===0)return;
   const key=JSON.stringify(p);if(key===LB.lastSent)return;
@@ -456,7 +465,7 @@ function renderLB(){
   if(LB.status==="off"){st.textContent=T("lbOff");return;}
   const wk=weekKey(),W=LB.period==="week";
   let rows=LB.rows.map(r=>({nick:String(r.nick||"").slice(0,20),
-    coins:num(W?r.wcoins:r.coins),right:num(W?r.wright:r.right),total:num(W?r.wtotal:r.total),focus:num(W?r.wfocusR:r.focusR),wk:String(r.wk||"")}))
+    rank:Math.min(4,num(r.rank)),coins:num(W?r.wcoins:r.coins),right:num(W?r.wright:r.right),total:num(W?r.wtotal:r.total),focus:num(W?r.wfocusR:r.focusR),wk:String(r.wk||"")}))
     .filter(r=>r.nick&&(!W||r.wk===wk)&&r.total>0);
   if(LB.sort==="acc"){const min=W?10:20;rows=rows.filter(r=>r.total>=min);rows.forEach(r=>r.acc=r.right/r.total);}
   rows.sort((a,b)=>(b[LB.sort]||0)-(a[LB.sort]||0));rows=rows.slice(0,25);
@@ -465,7 +474,7 @@ function renderLB(){
     const d=document.createElement("div");d.className="lbrow"+(me?" me":"");
     d.innerHTML='<span class="rk"></span><span class="nm"></span><span class="vl"></span>';
     d.children[0].textContent=["🥇","🥈","🥉"][i]||String(i+1);
-    d.children[1].textContent=r.nick+(me?T("you"):"");
+    d.children[1].textContent=RANK_E[r.rank]+" "+r.nick+(me?T("you"):"");
     d.children[2].textContent=LB.sort==="coins"?r.coins.toLocaleString()+" 💰":LB.sort==="focus"?r.focus+" "+CATS[focus()].e:Math.round(r.acc*100)+"%";
     list.appendChild(d);
   });
@@ -498,7 +507,7 @@ Object.assign(TXT.en,{
   learnNudge:"New here? Start with the 📚 Learn tab."
 });
 Object.assign(TXT.es,{
-  tabLearn:"📚 Aprender",readyTitle:"🎯 Medidor de preparación",readyNeed:"Responde al menos {n} preguntas más de {e} para ver tu medidor.",
+  tabLearn:"📚 Clases",readyTitle:"🎯 Medidor de preparación",readyNeed:"Responde al menos {n} preguntas más de {e} para ver tu medidor.",
   ready0:"Todavía no — sigue practicando",ready1:"Ya casi",ready2:"Vas bien para aprobar",ready3:"Listo para el examen",
   readyLine:"Línea para aprobar: 70%",readyWeak:"Practica esto después:",readyNoExam:"Haz un examen de práctica para afinar el cálculo.",practiceBtn:"Practicar",
   readyHow:"Basado en tus últimas 60 respuestas, tus exámenes de práctica y cuántos temas has cubierto para este examen.",
@@ -712,7 +721,7 @@ function startLookup(){
     $("modal").classList.add("on");
   };
   const done=()=>{const X=E();const r=res.filter(x=>x.ok).length;const avg=Math.round(res.reduce((a,b)=>a+b.secs,0)/res.length);
-    if(r===res.length&&(!X.lkBest||avg<X.lkBest))X.lkBest=avg;save();
+    if(r===res.length){X.lkPerfect=true;if(!X.lkBest||avg<X.lkBest)X.lkBest=avg;}save();
     const sh=$("sheet");sh.innerHTML='<div class="nudge"><div class="big">🔎</div><div class="qtext" style="margin:0 0 6px"></div><div class="note"></div><button class="bigbtn" id="lkA"></button><button class="ghost" id="lkD"></button></div>';
     sh.querySelector(".qtext").textContent=T("lkSummary",{r,n:res.length,s:avg});sh.querySelector(".note").textContent=X.lkBest?T("lkBest",{s:X.lkBest}):"";
     $("lkA").textContent=T("lkStart");$("lkA").onclick=()=>startLookup();$("lkD").textContent=T("exDone");$("lkD").onclick=()=>$("modal").classList.remove("on");};
@@ -766,13 +775,215 @@ function renderLearn(){renderReady();renderPath();renderReminders();renderGuide(
 $("examModeBtn").onclick=examMenu;$("lookupModeBtn").onclick=lookupMenu;
 initPush();
 
+// ---------- Rewards: build-a-job, power-ups, ranks & badges ----------
+Object.assign(TXT.en,{
+  wallet:"Coins",jobDoneBanner:"🎉 Job complete!",buildTitle:"🏗️ Your job site",buildNote:"Spend coins to build each job. Finish a job for bonus spins and a harder job.",
+  buildBtn:"Build · {c}",built:"Built ✓",needMore:"Need {c} more",jobDone:"🎉 Job complete! +{s} spins",jobN:"Job {n}",
+  shopTitle:"🛒 Power-ups",shopNote:"Use 50/50 and Code hint right inside a question.",
+  pu5050:"50/50",puHint:"💡 Hint",puShield:"🛡️ Streak shield",puSpins:"🎰 +5 spins",puOwned:"You have {n}",buy:"Buy · {c}",
+  pu5050d:"Removes two wrong answers ({c} coins)",puHintd:"Shows which code section to look in ({c} coins)",puShieldd:"Keeps your streak alive after one wrong answer",puSpinsd:"Trade coins for more plays",
+  hintTxt:"📖 Look in: {r}",noCoins:"Not enough coins",shieldUsed:"🛡️ Streak shield used — your streak is safe!",bought:"✔ Bought",
+  ranks:["Trainee","Apprentice","Journey Level","Crew Lead","Master"],rankLbl:"Rank: {r}",nextRank:"Next rank at level {l}",
+  badgeTitle:"🏅 Badges",badgeGot:"🏅 New badge: {b}",
+  b_lesson1:"First lesson",b_safety:"Safety first (all safety lessons)",b_unit:"Unit complete",b_exam:"Passed a practice exam",b_full:"Passed a FULL practice exam",
+  b_streak10:"10 in a row",b_lookup:"Perfect lookup drill",b_job1:"First job built",b_job3:"Three jobs built",b_ready80:"Ready Meter 80%+",b_mission7:"7 daily missions"
+});
+Object.assign(TXT.es,{
+  wallet:"Monedas",jobDoneBanner:"🎉 ¡Trabajo terminado!",buildTitle:"🏗️ Tu obra",buildNote:"Gasta monedas para construir cada trabajo. Termina uno para ganar giros extra y un trabajo más difícil.",
+  buildBtn:"Construir · {c}",built:"Hecho ✓",needMore:"Faltan {c}",jobDone:"🎉 ¡Trabajo terminado! +{s} giros",jobN:"Trabajo {n}",
+  shopTitle:"🛒 Ayudas",shopNote:"Usa 50/50 y Pista dentro de una pregunta.",
+  pu5050:"50/50",puHint:"💡 Pista",puShield:"🛡️ Escudo de racha",puSpins:"🎰 +5 giros",puOwned:"Tienes {n}",buy:"Comprar · {c}",
+  pu5050d:"Quita dos respuestas incorrectas ({c} monedas)",puHintd:"Muestra en qué sección del código buscar ({c} monedas)",puShieldd:"Mantiene tu racha después de una respuesta incorrecta",puSpinsd:"Cambia monedas por más jugadas",
+  hintTxt:"📖 Busca en: {r}",noCoins:"No tienes suficientes monedas",shieldUsed:"🛡️ Se usó el escudo — ¡tu racha está a salvo!",bought:"✔ Comprado",
+  ranks:["Aprendiz","Ayudante","Oficial","Líder de cuadrilla","Maestro/a"],rankLbl:"Rango: {r}",nextRank:"Siguiente rango en el nivel {l}",
+  badgeTitle:"🏅 Insignias",badgeGot:"🏅 Nueva insignia: {b}",
+  b_lesson1:"Primera lección",b_safety:"La seguridad primero (todas las de seguridad)",b_unit:"Unidad completa",b_exam:"Aprobaste un examen de práctica",b_full:"Aprobaste un examen COMPLETO",
+  b_streak10:"10 seguidas",b_lookup:"Búsqueda perfecta",b_job1:"Primer trabajo construido",b_job3:"Tres trabajos construidos",b_ready80:"Medidor 80%+",b_mission7:"7 misiones diarias"
+});
+const RANK_LV=[1,3,6,10,15],RANK_E=["🪪","🔧","⚡","🦺","👑"];
+function rankIdx(){const l=level().l;let r=0;RANK_LV.forEach((v,i)=>{if(l>=v)r=i;});return r;}
+function rankName(i){return T("ranks")[i]||"";}
+const PRICES={p5050:100,hint:75,shield:150,spins:250};
+function wallet(){const X=E();return Math.max(0,X.coins-(X.spent||0));}
+function spend(c){if(wallet()<c){toast(T("noCoins"));return false;}const X=E();X.spent=(X.spent||0)+c;save();hud();return true;}
+
+// Jobs: each piece [emoji, EN, ES]; costs grow per piece and per job
+const JOBS=[
+ {e:"🏠",en:"House: new service",es:"Casa: acometida nueva",p:[["🔌","Meter base","Base del medidor"],["🗄️","Main panel","Panel principal"],["🌍","Ground rods","Varillas de tierra"],["🍳","Kitchen circuits","Circuitos de cocina"],["🛁","Bathroom GFCIs","GFCI del baño"]]},
+ {e:"❄️",en:"Heat pump install",es:"Instalación de bomba de calor",p:[["🧱","Pad & condenser","Base y condensadora"],["🔴","Disconnect","Desconectador"],["🔌","Service receptacle","Receptáculo de servicio"],["〰️","Whip & breaker","Flexible y breaker"],["🌡️","Thermostat wiring","Cableado del termostato"]]},
+ {e:"🔥",en:"Electric heat retrofit",es:"Calefacción eléctrica",p:[["📦","Air handler","Manejadora de aire"],["♨️","Heat strips","Resistencias"],["⏱️","Sequencer","Secuenciador"],["🛑","Duct heater limits","Límites del calentador"],["🧮","Load calc approved","Cálculo de carga aprobado"]]},
+ {e:"🏢",en:"Commercial rooftop unit",es:"Unidad de techo comercial",p:[["🏗️","Crane lift","Grúa"],["📦","Set the RTU","Colocar la unidad"],["🟩","Disconnect & EGC","Desconectador y tierra"],["🔋","Feeder","Alimentador"],["✅","Inspection passed","Inspección aprobada"]]}
+];
+function jobState(){const X=E();if(!X.build)X.build={job:0,got:0};return X.build;}
+function jobDef(n){const t=JOBS[n%JOBS.length];return t;}
+function pieceCost(n,k){return Math.round((400+n*500+k*150)*(1+Math.floor(n/JOBS.length)*0.5)/50)*50;}
+function jobReward(n){return 15+5*Math.min(n,6);}
+function canAfford(){const b=jobState();return wallet()>=pieceCost(b.job,b.got);}
+function renderBuild(){
+  const box=$("buildCard");if(!box)return;const b=jobState(),j=jobDef(b.job);box.innerHTML="";
+  const h=document.createElement("h3");h.textContent=T("buildTitle");box.appendChild(h);
+  const n=document.createElement("div");n.className="note";n.textContent=T("buildNote");box.appendChild(n);
+  const jt=document.createElement("div");jt.className="jobt";jt.textContent=j.e+" "+T("jobN",{n:b.job+1})+" · "+j[S.lang];box.appendChild(jt);
+  const bar=document.createElement("div");bar.className="gauge";bar.innerHTML="<i></i>";bar.querySelector("i").style.width=(100*b.got/5)+"%";bar.querySelector("i").style.background="var(--gold)";box.appendChild(bar);
+  if(celebrating){const done=jobDef(celebrating.job);jt.textContent=done.e+" "+T("jobN",{n:celebrating.job+1})+" · "+done[S.lang];bar.querySelector("i").style.width="100%";const sc=sceneHTML(celebrating.job,5);box.appendChild(sc);celebrate(sc);return;}
+  box.appendChild(sceneHTML(b.job,b.got));justBuilt=-1;
+  const grid=document.createElement("div");grid.className="pieces";
+  j.p.forEach((p,k)=>{const d=document.createElement("div");d.className="piece"+(k<b.got?" got":k===b.got?" next":"");
+    d.innerHTML='<div class="pe"></div><div class="pn"></div>';d.querySelector(".pe").textContent=p[0];d.querySelector(".pn").textContent=S.lang==="es"?p[2]:p[1];grid.appendChild(d);});
+  box.appendChild(grid);
+  const cost=pieceCost(b.job,b.got),btn=document.createElement("button");btn.className="bigbtn";btn.style.fontSize="17px";
+  const w=wallet();btn.textContent=w>=cost?T("buildBtn",{c:cost.toLocaleString()}):T("needMore",{c:(cost-w).toLocaleString()});btn.disabled=w<cost;
+  btn.onclick=()=>{if(!spend(cost))return;justBuilt=b.got;b.got++;burst(j.p[b.got-1][0]);
+    if(b.got>=5){const s=jobReward(b.job);S.spins+=s;celebrating={job:b.job};b.job++;b.got=0;toast(T("jobDone",{s}),3000);
+      setTimeout(()=>{celebrating=null;renderBuild();},3200);}
+    save();renderBuild();renderGuide();checkBadges();};
+  box.appendChild(btn);
+}
+function renderShop(){
+  const box=$("shopCard");if(!box)return;box.innerHTML="";
+  const h=document.createElement("h3");h.textContent=T("shopTitle");box.appendChild(h);
+  const n=document.createElement("div");n.className="note";n.textContent=T("shopNote");box.appendChild(n);
+  [["shield",T("puShield"),T("puShieldd"),PRICES.shield,()=>{S.shield=(S.shield||0)+1;}],["spins",T("puSpins"),T("puSpinsd"),PRICES.spins,()=>{S.spins+=5;}]].forEach(it=>{
+    const r=document.createElement("div");r.className="shoprow";r.innerHTML='<div><b></b><div class="note"></div></div><button class="mini"></button>';
+    r.querySelector("b").textContent=it[1];r.querySelector(".note").textContent=it[2]+(it[0]==="shield"?" · "+T("puOwned",{n:S.shield||0}):"");
+    const bt=r.querySelector("button");bt.textContent=T("buy",{c:it[3]});bt.onclick=()=>{if(spend(it[3])){it[4]();save();hud();toast(T("bought"));renderShop();}};box.appendChild(r);});
+  [[T("pu5050"),T("pu5050d",{c:PRICES.p5050})],[T("puHint"),T("puHintd",{c:PRICES.hint})]].forEach(it=>{const d=document.createElement("div");d.className="note";d.style.marginTop="6px";d.textContent=it[0]+" — "+it[1];box.appendChild(d);});
+}
+// Power-up bar inside a question
+function powerBar(idx,opts,box,sh){
+  const bar=document.createElement("div");bar.className="pubar";
+  const b1=document.createElement("button");b1.className="mini";b1.textContent=T("pu5050")+" · "+PRICES.p5050;
+  b1.onclick=()=>{if(!spend(PRICES.p5050))return;b1.disabled=true;let n=0;shuffle([...box.children].map((b,i)=>i)).forEach(i=>{if(n<2&&!opts[i].ok&&!box.children[i].disabled){box.children[i].disabled=true;box.children[i].style.opacity=".3";n++;}});};
+  const b2=document.createElement("button");b2.className="mini";b2.textContent=T("puHint")+" · "+PRICES.hint;
+  b2.onclick=()=>{if(!spend(PRICES.hint))return;b2.disabled=true;const d=document.createElement("div");d.className="note";d.style.color="var(--volt)";d.style.margin="4px 0";d.textContent=T("hintTxt",{r:qText(idx).r});bar.after(d);};
+  const nz=s=>String(s).toLowerCase().replace(/[^a-z0-9.]/g,"");const ans=nz(QB[idx].a[0]),ref=nz(QB[idx].r);
+  const giveaway=ans.length>2&&(ref.indexOf(ans)>=0||ans.indexOf(ref)>=0||/^(rcw|wac|nec|table|article)/.test(ans));
+  bar.appendChild(b1);if(!giveaway)bar.appendChild(b2);box.before(bar);
+  return bar;
+}
+// Badges
+const BADGES=[
+ ["lesson1","📘",()=>Object.keys(S.lessons||{}).length>=1],
+ ["unit","🧩",()=>UNITS.some(u=>u.lessons.every(l=>S.lessons[l.id]))],
+ ["safety","🦺",()=>UNITS.every(u=>u.lessons.filter(l=>l.safety).every(l=>S.lessons[l.id]))],
+ ["streak10","🔥",()=>S.best>=10],
+ ["exam","📝",()=>Object.values(S.ex).some(x=>(x.exams||[]).some(e=>e.p>=70))],
+ ["full","🎓",()=>Object.values(S.ex).some(x=>(x.exams||[]).some(e=>e.p>=70&&e.n>=60))],
+ ["lookup","🔎",()=>Object.values(S.ex).some(x=>x.lkPerfect)],
+ ["job1","🏠",()=>Object.values(S.ex).some(x=>x.build&&x.build.job>=1)],
+ ["job3","🏗️",()=>Object.values(S.ex).some(x=>x.build&&x.build.job>=3)],
+ ["ready80","🎯",()=>{try{const r=readiness();return !r.need&&r.pct>=80;}catch(e){return false;}}],
+ ["mission7","📅",()=>(S.missions||0)>=7]
+];
+function checkBadges(){if(!S.badges)S.badges={};let got=null;BADGES.forEach(b=>{if(!S.badges[b[0]]&&b[2]()){S.badges[b[0]]=Date.now();got=b;}});if(got){toast(T("badgeGot",{b:got[1]+" "+T("b_"+got[0])}),3000);try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}}
+function renderBadges(){
+  const box=$("badgeCard");if(!box)return;box.innerHTML="";if(!S.badges)S.badges={};
+  const h=document.createElement("h3");h.textContent=T("badgeTitle")+" · "+Object.keys(S.badges).length+"/"+BADGES.length;box.appendChild(h);
+  const r=rankIdx(),rl=document.createElement("div");rl.className="note";rl.style.marginBottom="8px";
+  rl.textContent=RANK_E[r]+" "+T("rankLbl",{r:rankName(r)})+(r<RANK_LV.length-1?" · "+T("nextRank",{l:RANK_LV[r+1]}):"");box.appendChild(rl);
+  const g=document.createElement("div");g.className="badges";
+  BADGES.forEach(b=>{const d=document.createElement("div");d.className="badge"+(S.badges[b[0]]?" got":"");d.innerHTML='<div class="be"></div><div class="bn"></div>';d.querySelector(".be").textContent=b[1];d.querySelector(".bn").textContent=T("b_"+b[0]);g.appendChild(d);});
+  box.appendChild(g);
+}
+
+
+// ---------- Look & feel: themes and avatars ----------
+Object.assign(TXT.en,{lookTitle:"🎨 Make it yours",lookTheme:"Color theme",lookAvatar:"Your game piece",
+  th_classic:"Classic",th_rose:"Rose Gold",th_lavender:"Lavender",th_mint:"Mint & Coral",th_sunset:"Sunset",th_midnight:"Midnight Pink"});
+Object.assign(TXT.es,{lookTitle:"🎨 Hazlo tuyo",lookTheme:"Colores",lookAvatar:"Tu ficha",
+  th_classic:"Clásico",th_rose:"Oro rosa",th_lavender:"Lavanda",th_mint:"Menta y coral",th_sunset:"Atardecer",th_midnight:"Rosa nocturno"});
+const THEMES={
+  classic:{sw:["#0d1326","#ffc83d","#3ee6ff"]},
+  rose:{sw:["#2a1420","#f4b6c2","#e8a87c"]},
+  lavender:{sw:["#1e1636","#c9b6ff","#7ee8c8"]},
+  mint:{sw:["#0f2a2a","#ff8a7a","#7ee8d0"]},
+  sunset:{sw:["#2a1622","#ffb347","#ff6f91"]},
+  midnight:{sw:["#120f24","#ff7eb6","#9ad0ff"]}
+};
+const AVATARS=["👷‍♀️","👷‍♂️","👷","⛑️","🦺","⚡","🔧","❄️","🌸","🦋","💎","🌻"];
+function applyTheme(){document.body.setAttribute("data-theme",S.theme||"classic");const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=THEMES[S.theme||"classic"].sw[0];}
+function myToken(){return S.avatar||"👷‍♀️";}
+function renderLook(){
+  const box=$("lookCard");if(!box)return;box.innerHTML="";
+  const h=document.createElement("h3");h.textContent=T("lookTitle");box.appendChild(h);
+  const l1=document.createElement("div");l1.className="note";l1.textContent=T("lookTheme");box.appendChild(l1);
+  const g=document.createElement("div");g.className="themes";
+  Object.keys(THEMES).forEach(k=>{const b=document.createElement("button");b.className="themebtn"+((S.theme||"classic")===k?" on":"");
+    b.innerHTML='<span class="sw"></span><span class="tn"></span>';const sw=b.querySelector(".sw");
+    sw.style.background="linear-gradient(135deg,"+THEMES[k].sw[0]+" 0 45%,"+THEMES[k].sw[1]+" 45% 75%,"+THEMES[k].sw[2]+" 75%)";
+    b.querySelector(".tn").textContent=T("th_"+k);b.onclick=()=>{S.theme=k;save();applyTheme();renderLook();};g.appendChild(b);});
+  box.appendChild(g);
+  const l2=document.createElement("div");l2.className="note";l2.style.marginTop="10px";l2.textContent=T("lookAvatar");box.appendChild(l2);
+  const a2=document.createElement("div");a2.className="avatars";
+  AVATARS.forEach(e=>{const b=document.createElement("button");b.className="avbtn"+(myToken()===e?" on":"");b.textContent=e;b.onclick=()=>{S.avatar=e;save();renderLook();buildBoard();};a2.appendChild(b);});
+  box.appendChild(a2);
+}
+applyTheme();
+
+// ---------- Illustrated job scenes: parts appear as they're built ----------
+const SCENES=(function(){
+  const Ls=(en,es)=>S.lang==="es"?es:en;
+  const sky='<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8fd3ff"/><stop offset="1" stop-color="#d9f1ff"/></linearGradient><linearGradient id="indoor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f3e9dc"/><stop offset="1" stop-color="#e2d3bf"/></linearGradient></defs>';
+  const svg=b=>'<svg viewBox="0 0 320 190" xmlns="http://www.w3.org/2000/svg" class="scene-svg">'+sky+b+'</svg>';
+  const pt=(k,b)=>'<g class="pt" data-k="'+k+'">'+b+'</g>';
+  const tag=(x,y,s)=>'<text x="'+x+'" y="'+y+'" font-size="9" font-weight="700" font-family="Inter,sans-serif" fill="#1d2440" text-anchor="middle">'+s+'</text>';
+  return [
+  // Job 1: house, new service
+  ()=>svg('<rect width="320" height="190" fill="url(#sky)"/><rect y="160" width="320" height="30" fill="#7cc46a"/><rect y="158" width="320" height="4" fill="#5aa24c"/>'+
+   '<polygon points="40,80 160,20 280,80" fill="#c0504d"/><rect x="50" y="80" width="220" height="80" fill="#f5e6c8" stroke="#8a7a5a"/>'+
+   '<rect x="60" y="92" width="95" height="60" fill="#fff8ec" stroke="#b9a882"/><rect x="165" y="92" width="95" height="60" fill="#eef7ff" stroke="#b9a882"/>'+
+   tag(107,88,Ls("KITCHEN","COCINA"))+tag(212,88,Ls("BATH","BAÑO"))+'<rect x="300" y="40" width="6" height="120" fill="#7a5a3a"/><line x1="303" y1="48" x2="268" y2="96" stroke="#222" stroke-width="2"/>'+
+   pt(0,'<rect x="262" y="96" width="14" height="20" rx="3" fill="#9aa4b8" stroke="#3a4560"/><circle cx="269" cy="104" r="4.5" fill="#d8f0ff" stroke="#3a4560"/>')+
+   pt(1,'<rect x="140" y="100" width="12" height="30" fill="#7d879c" stroke="#3a4560"/><line x1="143" y1="106" x2="149" y2="106" stroke="#fff"/><line x1="143" y1="111" x2="149" y2="111" stroke="#fff"/><line x1="143" y1="116" x2="149" y2="116" stroke="#fff"/><line x1="152" y1="104" x2="262" y2="104" stroke="#3a4560" stroke-width="1.5" stroke-dasharray="3 2"/>')+
+   pt(2,'<line x1="269" y1="116" x2="269" y2="176" stroke="#2e8b57" stroke-width="2.5"/><rect x="266" y="160" width="6" height="26" fill="#b87333"/>')+
+   pt(3,'<rect x="72" y="118" width="70" height="16" fill="#d9c3a3"/><rect x="80" y="108" width="7" height="9" rx="1.5" fill="#fff" stroke="#555"/><rect x="118" y="108" width="7" height="9" rx="1.5" fill="#fff" stroke="#555"/><circle cx="100" cy="100" r="7" fill="#ffe27a" opacity=".9"/>')+
+   pt(4,'<rect x="230" y="128" width="26" height="20" rx="6" fill="#fff" stroke="#9ab"/><rect x="180" y="104" width="12" height="16" rx="2" fill="#fff" stroke="#555"/><rect x="183" y="107" width="6" height="3" fill="#e33"/><rect x="183" y="113" width="6" height="3" fill="#333"/>')),
+  // Job 2: heat pump install
+  ()=>svg('<rect width="320" height="190" fill="url(#sky)"/><rect y="160" width="320" height="30" fill="#7cc46a"/>'+
+   '<rect x="20" y="40" width="190" height="120" fill="#e9dcc3" stroke="#8a7a5a"/><rect x="20" y="40" width="190" height="10" fill="#b5654a"/><rect x="40" y="70" width="60" height="50" fill="#bfe4ff" stroke="#fff" stroke-width="3"/>'+
+   pt(0,'<rect x="225" y="150" width="80" height="10" fill="#bbb"/><rect x="232" y="102" width="66" height="48" rx="4" fill="#e7ebf2" stroke="#7d879c"/><circle cx="265" cy="126" r="17" fill="#cfd6e2" stroke="#7d879c"/><line x1="252" y1="126" x2="278" y2="126" stroke="#7d879c" stroke-width="2"/><line x1="265" y1="113" x2="265" y2="139" stroke="#7d879c" stroke-width="2"/>')+
+   pt(1,'<rect x="186" y="84" width="20" height="26" rx="2" fill="#8d97ab" stroke="#3a4560"/><rect x="192" y="90" width="8" height="10" fill="#e33"/>')+
+   pt(2,'<rect x="160" y="96" width="14" height="18" rx="2" fill="#fff" stroke="#555"/><rect x="164" y="100" width="6" height="3" fill="#333"/><rect x="164" y="106" width="6" height="3" fill="#333"/>'+tag(167,124,"GFCI"))+
+   pt(3,'<path d="M196 110 C 200 140, 225 128, 236 130" fill="none" stroke="#222" stroke-width="3"/><path d="M196 84 L196 60 L210 60" fill="none" stroke="#666" stroke-width="2.5"/>')+
+   pt(4,'<rect x="54" y="80" width="30" height="34" rx="4" fill="#fff" stroke="#555"/><text x="69" y="102" font-size="11" font-weight="800" text-anchor="middle" fill="#2a7">72°</text>')),
+  // Job 3: electric heat retrofit (utility closet)
+  ()=>svg('<rect width="320" height="190" fill="url(#indoor)"/><rect y="168" width="320" height="22" fill="#b89a74"/>'+
+   '<rect x="230" y="20" width="70" height="40" fill="#cfd6e2" stroke="#7d879c"/>'+tag(265,33,Ls("DUCT","DUCTO"))+
+   pt(0,'<rect x="90" y="50" width="90" height="118" rx="4" fill="#e7ebf2" stroke="#7d879c"/><rect x="100" y="120" width="70" height="40" fill="#d5dbe6"/><rect x="180" y="30" width="50" height="20" fill="#cfd6e2" stroke="#7d879c"/>')+
+   pt(1,'<rect x="100" y="60" width="70" height="40" fill="#2b2f3a"/><path d="M106 70 q6 -8 12 0 t12 0 t12 0 t12 0 t10 0" fill="none" stroke="#ff5a3c" stroke-width="3"/><path d="M106 88 q6 -8 12 0 t12 0 t12 0 t12 0 t10 0" fill="none" stroke="#ff8a3c" stroke-width="3"/>')+
+   pt(2,'<rect x="40" y="70" width="34" height="24" rx="3" fill="#8d97ab" stroke="#3a4560"/>'+tag(57,86,"SEQ")+'<line x1="74" y1="82" x2="100" y2="82" stroke="#3a4560" stroke-width="1.5" stroke-dasharray="3 2"/>')+
+   pt(3,'<circle cx="252" cy="47" r="6" fill="#e33" stroke="#fff"/><circle cx="276" cy="47" r="6" fill="#e33" stroke="#fff"/>'+tag(254,72,Ls("LIMITS","LÍMITES")))+
+   pt(4,'<rect x="230" y="96" width="60" height="70" rx="4" fill="#fff" stroke="#888"/><rect x="250" y="91" width="20" height="8" rx="2" fill="#aaa"/>'+tag(260,116,Ls("LOAD CALC","CÁLCULO"))+'<path d="M246 136 l10 10 l20 -22" fill="none" stroke="#2a7" stroke-width="5" stroke-linecap="round"/>')),
+  // Job 4: commercial rooftop unit
+  ()=>svg('<rect width="320" height="190" fill="url(#sky)"/><rect x="20" y="96" width="210" height="94" fill="#9aa3b5" stroke="#6b7488"/>'+
+   [40,80,120,160,200].map(x=>'<rect x="'+x+'" y="112" width="20" height="16" fill="#cfe9ff"/><rect x="'+x+'" y="142" width="20" height="16" fill="#cfe9ff"/>').join('')+'<rect x="20" y="92" width="210" height="6" fill="#6b7488"/>'+
+   pt(0,'<rect x="262" y="20" width="8" height="170" fill="#f2b705"/><line x1="266" y1="22" x2="150" y2="22" stroke="#f2b705" stroke-width="6"/><line x1="160" y1="22" x2="160" y2="52" stroke="#333"/><path d="M156 52 q4 8 8 0" fill="none" stroke="#333" stroke-width="2"/>')+
+   pt(1,'<rect x="110" y="58" width="80" height="34" rx="3" fill="#e7ebf2" stroke="#7d879c"/><circle cx="130" cy="75" r="10" fill="#cfd6e2" stroke="#7d879c"/><circle cx="170" cy="75" r="10" fill="#cfd6e2" stroke="#7d879c"/>')+
+   pt(2,'<rect x="196" y="66" width="16" height="22" rx="2" fill="#8d97ab" stroke="#3a4560"/><rect x="200" y="71" width="8" height="9" fill="#e33"/><path d="M204 88 L204 92" stroke="#2e8b57" stroke-width="3"/>')+
+   pt(3,'<path d="M212 80 L226 80 L226 186" fill="none" stroke="#555" stroke-width="4"/>')+
+   pt(4,'<g transform="rotate(-14 70 60)"><rect x="36" y="44" width="72" height="28" rx="4" fill="none" stroke="#1f9d55" stroke-width="3"/><text x="72" y="64" font-size="13" font-weight="900" font-family="Inter,sans-serif" fill="#1f9d55" text-anchor="middle">'+Ls("PASSED","APROBADO")+'</text></g>'))
+  ];
+})();
+let justBuilt=-1,celebrating=null;
+function sceneHTML(job,got){
+  const html=SCENES[job%SCENES.length]();const wrap=document.createElement("div");wrap.className="scene";wrap.innerHTML=html;
+  wrap.querySelectorAll("g.pt").forEach(g=>{const k=+g.dataset.k;g.classList.add(k<got?"on":k===got?"nextpt":"off");if(k===justBuilt&&k<got)g.classList.add("popin");});
+  return wrap;
+}
+function celebrate(wrap){
+  wrap.classList.add("party");
+  const cols=["#ffc83d","#ff6f91","#3ee6ff","#3ddc84","#c9b6ff","#ff8a7a"];
+  for(let i=0;i<36;i++){const c=document.createElement("i");c.className="confetti";c.style.left=(Math.random()*100)+"%";c.style.background=cols[i%cols.length];c.style.animationDelay=(Math.random()*0.4)+"s";c.style.transform="rotate("+(Math.random()*360)+"deg)";wrap.appendChild(c);}
+  const ban=document.createElement("div");ban.className="banner";ban.textContent=T("jobDoneBanner");wrap.appendChild(ban);
+}
+
 // ---------- Tabs ----------
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
   document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));
   document.querySelectorAll("section").forEach(s=>s.classList.toggle("on",s.id===b.dataset.tab));
   clearInterval(LB.poll);
   renderGuide();
-  if(b.dataset.tab==="board")buildBoard();
+  if(b.dataset.tab==="board"){buildBoard();renderBuild();renderShop();}
   if(b.dataset.tab==="stats")stats();
   if(b.dataset.tab==="learn")renderLearn();
   if(b.dataset.tab==="leaders"){loadLB(false);LB.poll=setInterval(()=>loadLB(true),60000);}

@@ -143,7 +143,8 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bot
 .lbtoggle button.on{background:var(--gold);color:#2a1a00;border-color:transparent}
 .lbsort button.on{background:var(--volt);color:#04202a;border-color:transparent}
 .sheetrow{margin-top:10px}
-.tabs{gap:4px}.tabs button{font-size:12px;padding:9px 0}
+.tabs{gap:4px}.tabs button{font-size:11px;padding:9px 1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.2px}
+body:not([data-theme="classic"]) .calcbtn{background:linear-gradient(180deg,rgba(255,255,255,.35),rgba(255,255,255,0)),var(--volt);box-shadow:0 5px 0 rgba(0,0,0,.35);color:#1d1424}
 .rdy{display:flex;align-items:baseline;gap:10px}.rdyn{font-family:Bungee,sans-serif;font-size:34px}.rdyl{font-weight:800}
 .gauge{position:relative;height:14px;background:#0a0f20;border-radius:8px;overflow:hidden;margin:6px 0 2px}.gauge i{display:block;height:100%;width:0;transition:width .5s}.gauge b{position:absolute;left:70%;top:0;bottom:0;width:2px;background:#fff}
 .weakrow{display:flex;justify-content:space-between;align-items:center;font-size:13px;margin:5px 0}
@@ -159,6 +160,48 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bot
 .exhead{display:flex;justify-content:space-between;font-weight:800;color:var(--muted);font-size:13px}#exClock,#lkClock{font-family:Bungee,sans-serif;color:var(--gold)}
 .exnav{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .opt.sel{border-color:var(--volt);background:#123a4a}
+.jobt{font-weight:800;margin:10px 0 4px}
+.pieces{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:10px 0}
+.piece{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 2px;text-align:center;opacity:.45;filter:grayscale(1)}
+.piece.got{opacity:1;filter:none;border-color:var(--gold);background:linear-gradient(180deg,#3b3216,var(--panel2))}
+.piece.next{opacity:.9;filter:none;border-style:dashed;border-color:var(--gold)}
+.piece .pe{font-size:24px}.piece .pn{font-size:9px;line-height:1.15;margin-top:3px}
+.shoprow{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:8px 0}
+.pubar{display:flex;gap:6px;margin:0 0 4px}
+.badges{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.badge{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 4px;text-align:center;opacity:.35;filter:grayscale(1)}
+.badge.got{opacity:1;filter:none;border-color:var(--gold)}
+.themes{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
+.themebtn{background:var(--panel2);border:2px solid var(--line);border-radius:12px;padding:8px 4px;color:var(--text);display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11px;font-weight:700}
+.themebtn.on{border-color:var(--gold)}.themebtn .sw{width:100%;height:26px;border-radius:8px;display:block}
+.avatars{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:6px}
+.avbtn{background:var(--panel2);border:2px solid var(--line);border-radius:12px;font-size:24px;padding:6px 0}.avbtn.on{border-color:var(--gold);background:var(--panel)}
+body[data-theme="rose"]{--bg:#1c0d16;--panel:#331a28;--panel2:#42223a;--line:#6a3a58;--gold:#f4b6c2;--gold2:#e8a87c;--volt:#ffd6e0;--text:#fff1f5;--muted:#d9a9bb}
+body[data-theme="rose"]{background:radial-gradient(circle at 50% -10%,#5a2a44 0%,#1c0d16 55%)}
+body[data-theme="lavender"]{--bg:#14102a;--panel:#241c44;--panel2:#2f2556;--line:#4b3f80;--gold:#c9b6ff;--gold2:#a48bff;--volt:#7ee8c8;--text:#f3efff;--muted:#b2a6d9}
+body[data-theme="lavender"]{background:radial-gradient(circle at 50% -10%,#3e2f78 0%,#14102a 55%)}
+body[data-theme="mint"]{--bg:#0b1f1f;--panel:#133232;--panel2:#1a4040;--line:#2c5f5f;--gold:#ff8a7a;--gold2:#ff6b5e;--volt:#7ee8d0;--text:#effffb;--muted:#9fcfc6}
+body[data-theme="mint"]{background:radial-gradient(circle at 50% -10%,#1f5a55 0%,#0b1f1f 55%)}
+body[data-theme="sunset"]{--bg:#1f0f1a;--panel:#35192b;--panel2:#452238;--line:#6e3654;--gold:#ffb347;--gold2:#ff7e5f;--volt:#ff8fb1;--text:#fff4ec;--muted:#e0b0b8}
+body[data-theme="sunset"]{background:radial-gradient(circle at 50% -10%,#6a2a46 0%,#1f0f1a 55%)}
+body[data-theme="midnight"]{--bg:#0c0a1c;--panel:#1b1734;--panel2:#252046;--line:#3e3670;--gold:#ff7eb6;--gold2:#ff5fa2;--volt:#9ad0ff;--text:#f6f2ff;--muted:#aaa3d6}
+body[data-theme="midnight"]{background:radial-gradient(circle at 50% -10%,#3a2a6a 0%,#0c0a1c 55%)}
+body:not([data-theme="classic"]) .machine{border-color:var(--gold);box-shadow:0 0 0 4px var(--panel2),0 10px 30px #0008;background:linear-gradient(180deg,var(--panel2),var(--panel))}
+body:not([data-theme="classic"]) .bigbtn{background:linear-gradient(180deg,var(--gold),var(--gold2));box-shadow:0 6px 0 rgba(0,0,0,.4)}
+.scene{position:relative;border-radius:12px;overflow:hidden;margin:10px 0;border:1px solid var(--line)}
+.scene-svg{display:block;width:100%;height:auto}
+.scene g.pt{transition:opacity .4s}.scene g.pt.off{opacity:.13;filter:grayscale(1)}
+.scene g.pt.nextpt{animation:ghostpulse 1.4s ease-in-out infinite;filter:grayscale(.6)}
+@keyframes ghostpulse{0%,100%{opacity:.2}50%{opacity:.55}}
+.scene g.pt.popin{transform-box:fill-box;transform-origin:center;animation:popin .7s cubic-bezier(.2,1.6,.4,1)}
+@keyframes popin{0%{transform:scale(0);opacity:0}60%{transform:scale(1.2);opacity:1}100%{transform:scale(1)}}
+.scene .confetti{position:absolute;top:-12px;width:7px;height:11px;border-radius:2px;animation:fall 2.2s ease-in forwards}
+@keyframes fall{to{top:110%;transform:rotate(540deg)}}
+.scene .banner{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.6);background:var(--gold);color:#2a1a00;font-weight:900;padding:10px 18px;border-radius:30px;box-shadow:0 6px 20px #0008;animation:bannerin .5s .2s forwards;opacity:0;white-space:nowrap}
+@keyframes bannerin{to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+.scene.party{animation:shake .5s 2}
+@keyframes shake{0%,100%{transform:none}25%{transform:rotate(-1deg)}75%{transform:rotate(1deg)}}
+.badge .be{font-size:24px}.badge .bn{font-size:10px;line-height:1.2;margin-top:3px}
 .mission{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 10px;margin-bottom:10px;font-size:12px;display:flex;align-items:center;gap:8px}
 .mission b{color:var(--gold)}
 .mission .mt{flex:1}
@@ -183,7 +226,7 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bot
   <div class="sub" id="subTxt"></div>
 
   <div class="hud">
-    <div class="chip"><b id="coins">0</b><span data-t="coins"></span></div>
+    <div class="chip"><b id="coins">0</b><span data-t="wallet"></span></div>
     <div class="chip"><b id="spins">0</b><span data-t="spins"></span></div>
     <div class="chip"><b id="streak">0</b><span data-t="streak"></span></div>
     <div class="chip"><b id="acc">–</b><span data-t="acc"></span></div>
@@ -225,6 +268,8 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bot
     <div class="board" id="boardGrid"></div>
     <div class="boost" id="boardBoost"></div>
     <div class="owned" id="ownedTxt"></div>
+    <div class="card" id="buildCard" style="margin-top:12px"></div>
+    <div class="card" id="shopCard"></div>
   </section>
 
   <section id="leaders" class="on">
@@ -248,6 +293,8 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bot
   </section>
 
   <section id="stats">
+    <div class="card" id="lookCard"></div>
+    <div class="card" id="badgeCard"></div>
     <div class="card"><h3 data-t="accTopic"></h3><div id="catBars"></div>
       <div class="note" style="margin-top:8px" data-t="statsNote"></div></div>
     <div class="card" id="sheetCalc"><h3 data-t="sheetTitle"></h3><div class="note" data-t="sheetIntro"></div><ol class="steps" data-t="sheetSteps"></ol></div>
