@@ -164,7 +164,7 @@ function applyLang(){
   buildBoard();
   if($("stats").classList.contains("on"))stats();
   renderLB();
-  renderGuide();
+  renderLearn();
   hud();
 }
 document.querySelectorAll(".langbar button").forEach(b=>b.onclick=()=>{S.lang=b.dataset.lang;save();applyLang();});
@@ -216,7 +216,7 @@ function pick(cat){
 function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;}
 
 // ---------- Question modal ----------
-function ask(idx,mult,label,onDone,practice){
+function ask(idx,mult,label,onDone,practice,noLink){
   const q=QB[idx],x=qText(idx),en=qText(idx,"en"),C=CATS[q.c];
   const opts=shuffle(x.a.map((t,i)=>({t,i,ok:i===0})));
   const sh=$("sheet");sh.classList.remove("showen");
@@ -224,7 +224,7 @@ function ask(idx,mult,label,onDone,practice){
     (S.lang==="es"?'<button class="enbtn" id="enBtn"></button>':'')+
     '<div id="opts"></div><div class="result" id="res"></div><div class="explain" id="exp"><span id="expT"></span><div class="entext" id="expEn"></div><span class="ref">📖 <span id="refT"></span></span></div><button class="bigbtn" id="cont" style="display:none"></button>';
   sh.querySelector(".qcat").textContent=C.e+" "+cn(q.c);
-  sh.querySelector(".qmult").textContent=practice?T("practiceTag"):(label||(mult+"×"));
+  sh.querySelector(".qmult").textContent=label||(practice?T("practiceTag"):(mult+"×"));
   $("qT").textContent=x.q;$("qEn").textContent=en.q;
   $("expT").textContent=x.e;$("expEn").textContent=en.e;$("refT").textContent=x.r;$("cont").textContent=T("cont");
   if($("enBtn")){$("enBtn").textContent=T("verEn");$("enBtn").onclick=()=>{const on=sh.classList.toggle("showen");$("enBtn").textContent=on?T("hideEn"):T("verEn");};}
@@ -247,7 +247,11 @@ function ask(idx,mult,label,onDone,practice){
       $("res").textContent=practice?T("correctSpin"):T("correctCoins",{n:gained});$("res").className="result g";burst("💰");
     }else{
       s.w++;btn.classList.add("wrong");S.streak=0;S.xp+=5;$("res").textContent=T("wrong");$("res").className="result b";
+      const lid=CAT_LESSON[q.c];
+      if(!noLink&&lid&&findLesson(lid)){const rb=document.createElement("button");rb.className="ghost";rb.textContent=T("reviewLesson");
+        rb.onclick=()=>{$("modal").classList.remove("on");if(onDone)onDone(false,0);setTimeout(()=>openLesson(lid),200);};$("cont").after(rb);}
     }
+    logAns(q.c,o.ok);
     $("exp").style.display="block";$("cont").style.display="block";
     save();hud();
     $("cont").onclick=()=>{$("modal").classList.remove("on");if(onDone)onDone(o.ok,gained);};
@@ -265,7 +269,8 @@ function renderGuide(){
   ["missionS","missionB"].forEach(id=>{const el=$(id);if(el)el.innerHTML='<span>🎯</span><div class="mt">'+html+'<div class="mp"><i style="width:'+pct+'%"></i></div></div>';});
   $("slotBoost").textContent=T("slotBoostOn");$("slotBoost").classList.toggle("on",!!g.slotBoost);
   $("boardBoost").textContent=T("boardBoostOn");$("boardBoost").classList.toggle("on",!!g.boardBoost);
-  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("next",b.dataset.tab===g.next&&!b.classList.contains("on")));
+  const noLessons=!Object.keys(S.lessons||{}).length;
+  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("next",(b.dataset.tab===g.next||(b.dataset.tab==="learn"&&noLessons))&&!b.classList.contains("on")));
 }
 function checkMission(){const g=G(),m=g.day;if(!m.done&&m.spins>=MISSION_SPINS&&m.rolls>=MISSION_ROLLS){m.done=true;S.spins+=10;toast(T("missionToast"),3000);burst("🎯");}}
 function goTab(t){const b=document.querySelector('.tabs button[data-tab="'+t+'"]');if(b)b.click();}
@@ -425,7 +430,7 @@ const URL_=(typeof CJ_CONFIG==="object"&&CJ_CONFIG.sheetUrl)||"";
 const LB={rows:[],period:"week",sort:"coins",status:URL_?"loading":"off",lastSent:"",timer:null,loadedAt:0,poll:null};
 function topicsStr(){return examCats().filter(c=>S.cat[c].t>0).map(c=>c+" "+S.cat[c].r+"/"+S.cat[c].t).join(", ");}
 function queuePush(){if(!URL_)return;clearTimeout(LB.timer);LB.timer=setTimeout(pushScore,4000);}
-function payload(){const X=E(),W=X.week;return {pid:S.pid,nick:(S.nick||"").slice(0,20),exam:S.exam||"06A",coins:X.coins,right:X.right,total:X.total,focusR:X.focusR,best:S.best,wk:W.k,wcoins:W.coins,wright:W.right,wtotal:W.total,wfocusR:W.focusR,topics:topicsStr(),lang:S.lang};}
+function payload(){const X=E(),W=X.week;return {pid:S.pid,nick:(S.nick||"").slice(0,20),exam:S.exam||"06A",coins:X.coins,right:X.right,total:X.total,focusR:X.focusR,best:S.best,wk:W.k,wcoins:W.coins,wright:W.right,wtotal:W.total,wfocusR:W.focusR,topics:topicsStr(),lang:S.lang,ready:(function(){try{const r=readiness();return r.need?"":r.pct;}catch(e){return "";}})(),lessons:Object.keys(S.lessons||{}).length};}
 function pushScore(){
   if(!URL_)return;const p=payload();if(p.total===0)return;
   const key=JSON.stringify(p);if(key===LB.lastSent)return;
@@ -470,6 +475,297 @@ document.querySelectorAll(".lbsort button").forEach(b=>b.onclick=()=>{LB.sort=b.
 document.querySelectorAll(".lbtoggle button").forEach(b=>b.onclick=()=>{LB.period=b.dataset.period;renderLB();});
 $("nickBtn").onclick=()=>{S.nick=$("nickIn").value.replace(/[<>]/g,"").trim().slice(0,20);LB.lastSent="";save();clearTimeout(LB.timer);pushScore();toast(T("saved"));renderLB();};
 
+// ---------- Learn tab: lessons, Exam Mode, Code Lookup Drill, Ready Meter, reminders ----------
+Object.assign(TXT.en,{
+  tabLearn:"📚 Learn",readyTitle:"🎯 Ready Meter",readyNeed:"Answer at least {n} more questions for {e} to see your Ready Meter.",
+  ready0:"Not ready yet — keep going",ready1:"Getting close",ready2:"On track to pass",ready3:"Ready for the exam",
+  readyLine:"Passing line: 70%",readyWeak:"Work on these next:",readyNoExam:"Take a practice exam to sharpen your estimate.",practiceBtn:"Practice",
+  readyHow:"Based on your last 60 answers, your practice exam scores, and how many topics you've covered for this exam.",
+  examBtn:"📝 Exam Mode",examBtnSub:"Timed practice test",lookupBtn:"🔎 Code Lookup Drill",lookupBtnSub:"Find it in the book, fast",
+  pathTitle:"📚 Lessons — start here",pathNote:"New to electrical? Start at the top and go in order. Each unit ends with a 🦺 safety lesson. Pass a lesson's 3-question check to unlock the next one.",
+  lessonsDone:"{n} of {m} lessons done",start:"Start",review:"Review",locked:"Locked",
+  checkBtn:"✅ Check yourself (3 questions)",checkPass:"🎉 Lesson complete! +150 coins, +3 spins",checkFail:"You got {n} of 3. Review the lesson and try again — you need 2 to pass.",
+  close:"Close",reviewLesson:"📚 Review the lesson",
+  exTitle:"📝 Exam Mode",exIntro:"Real exam conditions: a timer, no answers shown until the end, 70% to pass. Use your code book like the real (open-book) exam.",
+  exQuick:"Quick: 20 questions · 60 min",exFull:"Full: 60 questions · 3 hours",exNote:"The 01 NEC & Theory section is 60 questions in 3 hours. Check with PSI/L&I for your exam's exact format.",
+  exQ:"Question {i} of {n}",exPrev:"◀ Back",exNext:"Next ▶",exSubmit:"Submit exam",exSubmitConfirm:"Tap again to submit — {n} unanswered",exQuit:"Quit",exQuitConfirm:"Tap again to quit (nothing is saved)",
+  exPass:"PASS",exFail:"NOT YET",exScore:"{p}% · {r} of {n} correct",exTime:"Time used: {t}",exReport:"Score report by code article",exMissed:"Questions you missed",exDone:"Done",exReward:"+{c} coins",timeUp:"⏰ Time's up!",
+  lkTitle:"🔎 Code Lookup Drill",lkIntro:"Grab your code book. For each topic, find it in the book, then tap the section. Faster = more coins. Goal: under 2 minutes each.",
+  lkStart:"Start (5 topics)",lkFind:"Find it in your code book:",lkRight:"✔ {s}s · +{c} coins",lkWrong:"✘ It's {a}",lkSummary:"{r} of {n} right · average {s}s",lkBest:"Your best average: {s}s",
+  remTitle:"🔔 Daily reminders",remPush:"Turn on push notifications",remPushOn:"✔ Notifications are on",remPushNo:"Notifications are blocked. Turn them on in your phone's settings for this site.",
+  remIos:"On iPhone, add the game to your Home Screen first, then open it from there to turn on notifications.",
+  remCal:"📅 Add a daily reminder to my calendar",remTime:"Remind me at:",remCalNote:"Works on any phone: opens your calendar with a daily reminder to study.",
+  learnNudge:"New here? Start with the 📚 Learn tab."
+});
+Object.assign(TXT.es,{
+  tabLearn:"📚 Aprender",readyTitle:"🎯 Medidor de preparación",readyNeed:"Responde al menos {n} preguntas más de {e} para ver tu medidor.",
+  ready0:"Todavía no — sigue practicando",ready1:"Ya casi",ready2:"Vas bien para aprobar",ready3:"Listo para el examen",
+  readyLine:"Línea para aprobar: 70%",readyWeak:"Practica esto después:",readyNoExam:"Haz un examen de práctica para afinar el cálculo.",practiceBtn:"Practicar",
+  readyHow:"Basado en tus últimas 60 respuestas, tus exámenes de práctica y cuántos temas has cubierto para este examen.",
+  examBtn:"📝 Modo examen",examBtnSub:"Examen de práctica con tiempo",lookupBtn:"🔎 Búsqueda en el código",lookupBtnSub:"Encuéntralo en el libro, rápido",
+  pathTitle:"📚 Lecciones — empieza aquí",pathNote:"¿Nuevo en electricidad? Empieza arriba y ve en orden. Cada unidad termina con una lección de 🦺 seguridad. Aprueba la revisión de 3 preguntas para abrir la siguiente.",
+  lessonsDone:"{n} de {m} lecciones terminadas",start:"Empezar",review:"Repasar",locked:"Bloqueada",
+  checkBtn:"✅ Ponte a prueba (3 preguntas)",checkPass:"🎉 ¡Lección terminada! +150 monedas, +3 giros",checkFail:"Acertaste {n} de 3. Repasa la lección e inténtalo otra vez — necesitas 2 para aprobar.",
+  close:"Cerrar",reviewLesson:"📚 Repasar la lección",
+  exTitle:"📝 Modo examen",exIntro:"Condiciones reales: con tiempo, sin respuestas hasta el final, 70% para aprobar. Usa tu libro de código como en el examen real (a libro abierto).",
+  exQuick:"Rápido: 20 preguntas · 60 min",exFull:"Completo: 60 preguntas · 3 horas",exNote:"La sección de NEC y Teoría del 01 son 60 preguntas en 3 horas. Confirma con PSI/L&I el formato exacto de tu examen.",
+  exQ:"Pregunta {i} de {n}",exPrev:"◀ Atrás",exNext:"Siguiente ▶",exSubmit:"Entregar examen",exSubmitConfirm:"Toca otra vez para entregar — {n} sin responder",exQuit:"Salir",exQuitConfirm:"Toca otra vez para salir (no se guarda nada)",
+  exPass:"APROBADO",exFail:"TODAVÍA NO",exScore:"{p}% · {r} de {n} correctas",exTime:"Tiempo usado: {t}",exReport:"Resultados por artículo del código",exMissed:"Preguntas que fallaste",exDone:"Listo",exReward:"+{c} monedas",timeUp:"⏰ ¡Se acabó el tiempo!",
+  lkTitle:"🔎 Búsqueda en el código",lkIntro:"Toma tu libro de código. Para cada tema, encuéntralo en el libro y toca la sección. Más rápido = más monedas. Meta: menos de 2 minutos cada uno.",
+  lkStart:"Empezar (5 temas)",lkFind:"Encuéntralo en tu libro de código:",lkRight:"✔ {s}s · +{c} monedas",lkWrong:"✘ Es {a}",lkSummary:"{r} de {n} correctas · promedio {s}s",lkBest:"Tu mejor promedio: {s}s",
+  remTitle:"🔔 Recordatorios diarios",remPush:"Activar notificaciones",remPushOn:"✔ Las notificaciones están activadas",remPushNo:"Las notificaciones están bloqueadas. Actívalas en la configuración de tu teléfono para este sitio.",
+  remIos:"En iPhone, primero agrega el juego a tu pantalla de inicio y ábrelo desde ahí para activar las notificaciones.",
+  remCal:"📅 Agregar un recordatorio diario a mi calendario",remTime:"Recordarme a las:",remCalNote:"Funciona en cualquier teléfono: abre tu calendario con un recordatorio diario para estudiar.",
+  learnNudge:"¿Eres nuevo? Empieza en la pestaña 📚 Aprender."
+});
+CATS.safety={e:"🦺",en:"Safety",es:"Seguridad",sen:"Safety",ses:"Seguridad"};
+if(CK.indexOf("safety")<0)CK.push("safety");
+if(!S.cat.safety)S.cat.safety={r:0,t:0};
+if(!S.lessons)S.lessons={};
+const CAT_LESSON={theory:"u1l2",controls:"u2l3",general:"u3l1",branch:"u6l2",amp:"u3l3",ground:"u3l5",raceway:"u3l6",calc:"u5l2",motor:"u2l3",hvac:"u4l1",wa:"u7l1",safety:"u1s"};
+const fmtP=s=>{const d=document.createElement("div");s.split(/(\*\*[^*]+\*\*)/).forEach(part=>{if(/^\*\*[^*]+\*\*$/.test(part)){const b=document.createElement("b");b.textContent=part.slice(2,-2);d.appendChild(b);}else d.appendChild(document.createTextNode(part));});return d;};
+function examUnits(){const ex=S.exam||"06A";return UNITS.filter(u=>u.x==="all"||u.x.split(",").indexOf(ex)>=0);}
+function findLesson(id){for(const u of UNITS)for(let i=0;i<u.lessons.length;i++)if(u.lessons[i].id===id)return {u,l:u.lessons[i],i};return null;}
+function lessonOpen(u,i){return i===0||!!S.lessons[u.lessons[i-1].id]||!!S.lessons[u.lessons[i].id];}
+function logAns(c,ok){const X=E();if(!X.log)X.log=[];X.log.push([c,ok?1:0]);if(X.log.length>120)X.log.splice(0,X.log.length-120);}
+
+// ----- Ready Meter -----
+function readiness(){
+  const X=E(),log=(X.log||[]).slice(-60);
+  if(log.length<20)return {need:20-log.length};
+  const acc=log.reduce((a,b)=>a+b[1],0)/log.length;
+  const ex=(X.exams||[]).slice(-2);const exAvg=ex.length?ex.reduce((a,b)=>a+b.p,0)/ex.length/100:null;
+  const ec=examCats();const cov=ec.filter(c=>S.cat[c]&&S.cat[c].t>=5).length/ec.length;
+  const base=0.7*acc+0.3*(exAvg===null?acc:exAvg);
+  const pct=Math.round(100*base*(0.85+0.15*cov));
+  const per={};log.forEach(([c,ok])=>{per[c]=per[c]||{r:0,t:0};per[c].t++;per[c].r+=ok;});
+  const weak=ec.map(c=>{const p=per[c]||S.cat[c]||{r:0,t:0};return {c,acc:p.t?p.r/p.t:0,t:p.t};}).sort((a,b)=>a.acc-b.acc||a.t-b.t).slice(0,3);
+  return {pct,weak,hasExam:ex.length>0};
+}
+function renderReady(){
+  const box=$("readyCard");if(!box)return;box.innerHTML="";
+  const h=document.createElement("h3");h.textContent=T("readyTitle")+" · "+(S.exam||"06A");box.appendChild(h);
+  const r=readiness();
+  if(r.need){const p=document.createElement("div");p.className="note";p.textContent=T("readyNeed",{n:r.need,e:S.exam||"06A"});box.appendChild(p);return;}
+  const lbl=r.pct>=80?T("ready3"):r.pct>=70?T("ready2"):r.pct>=60?T("ready1"):T("ready0");
+  const col=r.pct>=70?"var(--good)":r.pct>=60?"var(--gold)":"var(--bad)";
+  box.insertAdjacentHTML("beforeend",'<div class="rdy"><div class="rdyn"></div><div class="rdyl"></div></div><div class="gauge"><i></i><b></b></div><div class="note gline"></div>');
+  box.querySelector(".rdyn").textContent=r.pct+"%";box.querySelector(".rdyn").style.color=col;box.querySelector(".rdyl").textContent=lbl;
+  box.querySelector(".gauge i").style.width=Math.min(100,r.pct)+"%";box.querySelector(".gauge i").style.background=col;
+  box.querySelector(".gline").textContent=T("readyLine");
+  const w=document.createElement("div");w.className="note";w.style.marginTop="8px";w.textContent=T("readyWeak");box.appendChild(w);
+  r.weak.forEach(x=>{const d=document.createElement("div");d.className="weakrow";d.innerHTML='<span></span><button class="mini"></button>';
+    d.children[0].textContent=CATS[x.c].e+" "+cn(x.c)+(x.t?" · "+Math.round(x.acc*100)+"%":"");d.children[1].textContent=T("practiceBtn");
+    d.children[1].onclick=()=>ask(pick(x.c),1,"",()=>renderReady(),true);box.appendChild(d);});
+  const n=document.createElement("div");n.className="note";n.style.marginTop="8px";n.textContent=(r.hasExam?"":T("readyNoExam")+" ")+T("readyHow");box.appendChild(n);
+}
+
+// ----- Lesson path -----
+function renderPath(){
+  const box=$("pathList");if(!box)return;box.innerHTML="";
+  const units=examUnits();let total=0,done=0;
+  units.forEach(u=>{total+=u.lessons.length;done+=u.lessons.filter(l=>S.lessons[l.id]).length;});
+  $("pathCount").textContent=T("lessonsDone",{n:done,m:total});
+  units.forEach(u=>{
+    const card=document.createElement("div");card.className="unit";
+    const ud=u.lessons.filter(l=>S.lessons[l.id]).length;
+    card.innerHTML='<div class="uhead"><span class="ue"></span><span class="ut"></span><span class="uc"></span></div><div class="ulist"></div>';
+    card.querySelector(".ue").textContent=u.e;card.querySelector(".ut").textContent=u.t[S.lang];card.querySelector(".uc").textContent=ud+"/"+u.lessons.length;
+    const list=card.querySelector(".ulist");
+    u.lessons.forEach((l,i)=>{
+      const open=lessonOpen(u,i),isDone=!!S.lessons[l.id];
+      const b=document.createElement("button");b.className="lrow"+(isDone?" done":open?" open":" locked")+(l.safety?" safety":"");
+      b.innerHTML='<span class="li"></span><span class="lt"></span><span class="ls"></span>';
+      b.children[0].textContent=isDone?"✅":open?"▶️":"🔒";b.children[1].textContent=l.t[S.lang];b.children[2].textContent=isDone?T("review"):open?T("start"):T("locked");
+      b.disabled=!open;b.onclick=()=>openLesson(l.id);list.appendChild(b);
+    });
+    box.appendChild(card);
+  });
+}
+function openLesson(id){
+  const f=findLesson(id);if(!f)return;const l=f.l;
+  const sh=$("sheet");sh.classList.remove("showen");sh.innerHTML="";
+  const top=document.createElement("div");top.innerHTML='<span class="qcat"></span>'+(S.lang==="es"?'<button class="enbtn" id="enBtn"></button>':'');
+  top.querySelector(".qcat").textContent=f.u.e+" "+f.u.t[S.lang];sh.appendChild(top);
+  const h=document.createElement("div");h.className="qtext";h.textContent=l.t[S.lang];sh.appendChild(h);
+  if(l.svg&&DIAGRAMS[l.svg]){const d=document.createElement("div");d.innerHTML=DIAGRAMS[l.svg]((en,es)=>S.lang==="es"?es:en);sh.appendChild(d);}
+  const body=document.createElement("div");body.className="lbody";
+  l[S.lang].forEach((p,k)=>{const el=fmtP(p.replace(/^• /,""));el.className=p.indexOf("• ")===0?"lbul":"lpar";
+    if(S.lang==="es"){const en=fmtP(l.en[k].replace(/^• /,""));en.className="entext";el.appendChild(en);}
+    body.appendChild(el);});
+  sh.appendChild(body);
+  const go=document.createElement("button");go.className="bigbtn";go.style.fontSize="16px";go.textContent=T("checkBtn");go.onclick=()=>lessonCheck(l);sh.appendChild(go);
+  const cl=document.createElement("button");cl.className="ghost";cl.textContent=T("close");cl.onclick=()=>{$("modal").classList.remove("on");};sh.appendChild(cl);
+  if($("enBtn")){$("enBtn").textContent=T("verEn");$("enBtn").onclick=()=>{const on=sh.classList.toggle("showen");$("enBtn").textContent=on?T("hideEn"):T("verEn");};}
+  $("modal").classList.add("on");sh.scrollTop=0;
+}
+function lessonCheck(l){
+  const ids=shuffle(l.quiz).slice(0,3);let right=0,k=0;
+  const next=()=>{if(k>=ids.length){finish();return;}const i=ids[k++];ask(i,1,"✅ "+k+"/3",ok=>{if(ok)right++;setTimeout(next,150);},true,true);};
+  const finish=()=>{
+    const pass=right>=2;
+    if(pass&&!S.lessons[l.id]){S.lessons[l.id]=true;addCoins(150);S.spins+=3;burst("🎉");}
+    else if(pass){S.lessons[l.id]=true;}
+    save();hud();
+    const sh=$("sheet");sh.innerHTML='<div class="nudge"><div class="big"></div><div class="qtext" style="margin:0 0 10px"></div><button class="bigbtn" id="lcBtn"></button></div>';
+    sh.querySelector(".big").textContent=pass?"🎉":"📚";sh.querySelector(".qtext").textContent=pass?T("checkPass"):T("checkFail",{n:right});
+    $("lcBtn").textContent=pass?T("exDone"):T("reviewLesson");$("lcBtn").onclick=()=>{if(pass){$("modal").classList.remove("on");renderLearn();}else openLesson(l.id);};
+    $("modal").classList.add("on");
+  };
+  next();
+}
+
+// ----- Exam Mode -----
+let EXM=null;
+function examMenu(){
+  const sh=$("sheet");sh.classList.remove("showen");
+  sh.innerHTML='<div class="qtext" style="margin-top:0"></div><div class="note" id="exI"></div><button class="examcard" id="exA"><b></b></button><button class="examcard" id="exB"><b></b></button><div class="note" id="exN"></div><button class="ghost" id="exC"></button>';
+  sh.querySelector(".qtext").textContent=T("exTitle")+" · "+(S.exam||"06A");$("exI").textContent=T("exIntro");$("exN").textContent=T("exNote");
+  $("exA").firstChild.textContent=T("exQuick");$("exB").firstChild.textContent=T("exFull");$("exC").textContent=T("close");
+  $("exA").onclick=()=>startExam(20,60);$("exB").onclick=()=>startExam(60,180);$("exC").onclick=()=>$("modal").classList.remove("on");
+  $("modal").classList.add("on");
+}
+function startExam(n,mins){
+  const ex=S.exam||"06A";let pool=[];QB.forEach((q,i)=>{if(applies(q,ex))pool.push(i);});
+  const qs=shuffle(pool).slice(0,n).map(i=>({i,order:shuffle([0,1,2,3]),pick:-1}));
+  EXM={qs,cur:0,end:Date.now()+mins*60000,start:Date.now(),timer:null};
+  EXM.timer=setInterval(()=>{const el=$("exClock");if(!el){return;}const ms=EXM.end-Date.now();if(ms<=0){clearInterval(EXM.timer);toast(T("timeUp"),3000);finishExam();return;}el.textContent=fmtT(ms);el.style.color=ms<5*60000?"var(--bad)":"var(--gold)";},1000);
+  renderExamQ();
+}
+const fmtT=ms=>{const s=Math.max(0,Math.round(ms/1000));const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return (h?h+":":"")+(h&&m<10?"0":"")+m+":"+(x<10?"0":"")+x;};
+function renderExamQ(){
+  const e=EXM,o=e.qs[e.cur],x=qText(o.i),en=qText(o.i,"en");
+  const sh=$("sheet");const keepEn=sh.classList.contains("showen");
+  sh.innerHTML='<div class="exhead"><span id="exPos"></span><span id="exClock"></span></div>'+(S.lang==="es"?'<button class="enbtn" id="enBtn"></button>':'')+'<div class="qtext"><span id="qT"></span><div class="entext" id="qEn"></div></div><div id="opts"></div><div class="exnav"><button class="ghost" id="exP"></button><button class="ghost" id="exNx"></button></div><button class="bigbtn" id="exS" style="font-size:16px"></button><button class="ghost" id="exQ" style="color:var(--muted)"></button>';
+  $("exPos").textContent=T("exQ",{i:e.cur+1,n:e.qs.length});$("exClock").textContent=fmtT(e.end-Date.now());
+  $("qT").textContent=x.q;$("qEn").textContent=en.q;
+  o.order.forEach(k=>{const b=document.createElement("button");b.className="opt"+(o.pick===k?" sel":"");const s1=document.createElement("span");s1.textContent=x.a[k];b.appendChild(s1);
+    if(S.lang==="es"){const s2=document.createElement("div");s2.className="entext";s2.textContent=en.a[k];b.appendChild(s2);}
+    b.onclick=()=>{o.pick=k;if(e.cur<e.qs.length-1){e.cur++;}renderExamQ();};$("opts").appendChild(b);});
+  $("exP").textContent=T("exPrev");$("exP").disabled=e.cur===0;$("exP").onclick=()=>{e.cur--;renderExamQ();};
+  $("exNx").textContent=T("exNext");$("exNx").disabled=e.cur===e.qs.length-1;$("exNx").onclick=()=>{e.cur++;renderExamQ();};
+  const un=e.qs.filter(q=>q.pick<0).length;
+  $("exS").textContent=T("exSubmit");$("exS").onclick=function(){if(un===0||this.dataset.armed)finishExam();else{this.dataset.armed=1;this.textContent=T("exSubmitConfirm",{n:un});}};
+  $("exQ").textContent=T("exQuit");$("exQ").onclick=function(){if(this.dataset.armed){clearInterval(e.timer);EXM=null;$("modal").classList.remove("on");}else{this.dataset.armed=1;this.textContent=T("exQuitConfirm");}};
+  if($("enBtn")){if(keepEn)sh.classList.add("showen");$("enBtn").textContent=sh.classList.contains("showen")?T("hideEn"):T("verEn");$("enBtn").onclick=()=>{const on=sh.classList.toggle("showen");$("enBtn").textContent=on?T("hideEn"):T("verEn");};}
+  $("modal").classList.add("on");
+}
+function artKey(i){const q=QB[i],r=q.r||"";
+  if(/WAC|RCW/.test(r))return S.lang==="es"?"Leyes de WA":"WA law";
+  const m=r.match(/(?:NEC|Table|Art\.)\s*(?:Table\s*)?(\d{2,3})/);if(m)return "Art. "+m[1];
+  if(/Ch\. 9/.test(r))return S.lang==="es"?"Cap. 9":"Ch. 9";
+  return cn(q.c);}
+function finishExam(){
+  const e=EXM;if(!e)return;clearInterval(e.timer);EXM=null;
+  const X=E(),W=X.week;let right=0;const rep={},missed=[];
+  e.qs.forEach(o=>{const q=QB[o.i],ok=o.pick===0;const s=S.qs[o.i]=S.qs[o.i]||{r:0,w:0};
+    S.cat[q.c].t++;X.total++;W.total++;if(q.c===focus())X.focusT++;
+    if(ok){right++;s.r++;S.cat[q.c].r++;X.right++;W.right++;if(q.c===focus()){X.focusR++;W.focusR++;}}else{s.w++;missed.push(o);}
+    logAns(q.c,ok);const k=artKey(o.i);rep[k]=rep[k]||{r:0,t:0};rep[k].t++;if(ok)rep[k].r++;});
+  const p=Math.round(100*right/e.qs.length),pass=p>=70;
+  const coins=right*20+(pass?300:0);addCoins(coins);S.xp+=right*10;
+  if(!X.exams)X.exams=[];X.exams.push({d:Date.now(),n:e.qs.length,p});if(X.exams.length>10)X.exams.shift();
+  save();hud();
+  const sh=$("sheet");sh.classList.remove("showen");
+  sh.innerHTML='<div class="nudge"><div class="result" id="exR"></div><div class="qtext" id="exSc" style="margin:4px 0"></div><div class="note" id="exT"></div><div class="note" id="exC"></div></div><h3 style="font-size:14px;margin:14px 0 6px" id="exRh"></h3><div id="exRep"></div><h3 style="font-size:14px;margin:14px 0 6px" id="exMh"></h3><div id="exMiss"></div><button class="bigbtn" id="exD"></button>';
+  $("exR").textContent=pass?"✔ "+T("exPass"):"✘ "+T("exFail");$("exR").className="result "+(pass?"g":"b");
+  $("exSc").textContent=T("exScore",{p,r:right,n:e.qs.length});$("exT").textContent=T("exTime",{t:fmtT(Date.now()-e.start)});$("exC").textContent=T("exReward",{c:coins});
+  $("exRh").textContent=T("exReport");
+  Object.keys(rep).map(k=>({k,...rep[k]})).sort((a,b)=>a.r/a.t-b.r/b.t).forEach(x=>{const pc=Math.round(100*x.r/x.t),col=pc>=70?"var(--good)":pc>=50?"var(--gold)":"var(--bad)";
+    const d=document.createElement("div");d.className="bar";d.innerHTML='<span class="n"></span><span class="t"><i></i></span><span class="p"></span>';
+    d.querySelector(".n").textContent=x.k;d.querySelector("i").style.width=pc+"%";d.querySelector("i").style.background=col;d.querySelector(".p").textContent=x.r+"/"+x.t;$("exRep").appendChild(d);});
+  $("exMh").textContent=T("exMissed")+" ("+missed.length+")";
+  missed.forEach(o=>{const x=qText(o.i);const d=document.createElement("div");d.className="explain";d.style.display="block";d.style.marginBottom="8px";
+    d.innerHTML='<b></b><div style="color:var(--good);margin-top:4px"></div><div style="margin-top:4px"></div><span class="ref"></span>';
+    d.children[0].textContent=x.q;d.children[1].textContent="✔ "+x.a[0];d.children[2].textContent=x.e;d.children[3].textContent="📖 "+x.r;$("exMiss").appendChild(d);});
+  $("exD").textContent=T("exDone");$("exD").onclick=()=>{$("modal").classList.remove("on");renderLearn();};
+  $("modal").classList.add("on");sh.scrollTop=0;
+}
+
+// ----- Code Lookup Drill -----
+function lookupMenu(){
+  const sh=$("sheet");sh.classList.remove("showen");
+  sh.innerHTML='<div class="qtext" style="margin-top:0"></div><div class="note" id="lkI"></div><div class="note" id="lkB" style="margin-top:6px"></div><button class="bigbtn" id="lkS"></button><button class="ghost" id="lkC"></button>';
+  sh.querySelector(".qtext").textContent=T("lkTitle");$("lkI").textContent=T("lkIntro");
+  const X=E();$("lkB").textContent=X.lkBest?T("lkBest",{s:X.lkBest}):"";
+  $("lkS").textContent=T("lkStart");$("lkC").textContent=T("close");
+  $("lkS").onclick=()=>startLookup();$("lkC").onclick=()=>$("modal").classList.remove("on");
+  $("modal").classList.add("on");
+}
+function startLookup(){
+  const ex=S.exam||"06A";const pool=LOOKUPS.filter(l=>l[0]==="all"||l[0].split(",").indexOf(ex)>=0);
+  const items=shuffle(pool).slice(0,5);const res=[];let k=0,timer=null;
+  const show=()=>{
+    if(k>=items.length)return done();
+    const it=items[k],t0=Date.now();
+    const sh=$("sheet");sh.innerHTML='<div class="exhead"><span></span><span id="lkClock">2:00</span></div><div class="note"></div><div class="qtext" style="margin-top:4px"></div><div id="opts"></div><div class="result" id="lkR"></div><button class="bigbtn" id="lkN" style="display:none"></button>';
+    sh.querySelector(".exhead span").textContent=(k+1)+" / "+items.length;sh.querySelector(".note").textContent=T("lkFind");
+    sh.querySelector(".qtext").textContent=S.lang==="es"?it[2]:it[1];
+    let answered=false;
+    const finish=(choice)=>{if(answered)return;answered=true;clearInterval(timer);const secs=Math.round((Date.now()-t0)/1000);const ok=choice===it[3];
+      [...$("opts").children].forEach(b=>{b.disabled=true;if(b.textContent===it[3])b.classList.add("right");else if(b.textContent===choice)b.classList.add("wrong");});
+      let c=0;if(ok){c=50+Math.max(0,120-secs)*2;addCoins(c);burst("🔎");}
+      res.push({ok,secs});$("lkR").textContent=ok?T("lkRight",{s:secs,c}):T("lkWrong",{a:it[3]});$("lkR").className="result "+(ok?"g":"b");
+      $("lkN").style.display="block";$("lkN").textContent=T("cont");$("lkN").onclick=()=>{k++;show();};save();hud();};
+    shuffle([it[3]].concat(it[4])).forEach(a=>{const b=document.createElement("button");b.className="opt";b.textContent=a;b.onclick=()=>finish(a);$("opts").appendChild(b);});
+    timer=setInterval(()=>{const left=120-Math.round((Date.now()-t0)/1000);const el=$("lkClock");if(el){el.textContent=fmtT(Math.max(0,left)*1000);el.style.color=left<30?"var(--bad)":"var(--gold)";}if(left<=0)finish(null);},500);
+    $("modal").classList.add("on");
+  };
+  const done=()=>{const X=E();const r=res.filter(x=>x.ok).length;const avg=Math.round(res.reduce((a,b)=>a+b.secs,0)/res.length);
+    if(r===res.length&&(!X.lkBest||avg<X.lkBest))X.lkBest=avg;save();
+    const sh=$("sheet");sh.innerHTML='<div class="nudge"><div class="big">🔎</div><div class="qtext" style="margin:0 0 6px"></div><div class="note"></div><button class="bigbtn" id="lkA"></button><button class="ghost" id="lkD"></button></div>';
+    sh.querySelector(".qtext").textContent=T("lkSummary",{r,n:res.length,s:avg});sh.querySelector(".note").textContent=X.lkBest?T("lkBest",{s:X.lkBest}):"";
+    $("lkA").textContent=T("lkStart");$("lkA").onclick=()=>startLookup();$("lkD").textContent=T("exDone");$("lkD").onclick=()=>$("modal").classList.remove("on");};
+  show();
+}
+
+// ----- Reminders -----
+const OS_ID=(typeof CJ_CONFIG==="object"&&CJ_CONFIG.oneSignalAppId)||"";
+let osReady=false;
+function initPush(){
+  if(!OS_ID||location.protocol!=="https:")return;
+  window.OneSignalDeferred=window.OneSignalDeferred||[];
+  const base=location.pathname.replace(/[^/]*$/,"");
+  window.OneSignalDeferred.push(function(OneSignal){
+    return OneSignal.init({appId:OS_ID,serviceWorkerPath:(base+"push/onesignal/OneSignalSDKWorker.js").replace(/^\//,""),serviceWorkerParam:{scope:base+"push/onesignal/"}})
+      .then(()=>{osReady=true;try{OneSignal.User.addTags({exam:S.exam||"06A",lang:S.lang});}catch(e){}renderReminders();});
+  });
+  const s=document.createElement("script");s.src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js";s.defer=true;document.head.appendChild(s);
+}
+function renderReminders(){
+  const box=$("remCard");if(!box)return;box.innerHTML="";
+  const h=document.createElement("h3");h.textContent=T("remTitle");box.appendChild(h);
+  if(OS_ID){
+    const perm=(typeof Notification!=="undefined")?Notification.permission:"default";
+    const isIOS=/iphone|ipad/i.test(navigator.userAgent),standalone=(navigator.standalone===true)||(window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches);
+    if(perm==="granted"){const d=document.createElement("div");d.className="note";d.style.color="var(--good)";d.textContent=T("remPushOn");box.appendChild(d);}
+    else if(perm==="denied"){const d=document.createElement("div");d.className="note";d.textContent=T("remPushNo");box.appendChild(d);}
+    else if(isIOS&&!standalone){const d=document.createElement("div");d.className="note";d.textContent=T("remIos");box.appendChild(d);}
+    else{const b=document.createElement("button");b.className="calcbtn";b.style.marginTop="0";b.textContent=T("remPush");
+      b.onclick=()=>{window.OneSignalDeferred=window.OneSignalDeferred||[];window.OneSignalDeferred.push(function(OneSignal){return OneSignal.Notifications.requestPermission().then(()=>renderReminders());});};box.appendChild(b);}
+  }
+  const row=document.createElement("div");row.className="nickrow";row.style.marginTop="10px";row.innerHTML='<span class="note" style="align-self:center"></span><input type="time" id="remT" value="'+(S.remTime||"17:30")+'" style="flex:0 0 120px">';
+  row.querySelector("span").textContent=T("remTime");box.appendChild(row);
+  const c=document.createElement("button");c.className="ghost";c.textContent=T("remCal");c.onclick=calendarReminder;box.appendChild(c);
+  const n=document.createElement("div");n.className="note";n.style.marginTop="6px";n.textContent=T("remCalNote");box.appendChild(n);
+}
+function calendarReminder(){
+  const tm=($("remT")&&$("remT").value)||"17:30";S.remTime=tm;save();
+  const [hh,mm]=tm.split(":").map(Number);const d=new Date();d.setHours(hh,mm,0,0);if(d<new Date())d.setDate(d.getDate()+1);
+  const p=n=>(n<10?"0":"")+n;const dt=d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+"T"+p(hh)+p(mm)+"00";
+  const end=new Date(d.getTime()+15*60000);const dte=end.getFullYear()+p(end.getMonth()+1)+p(end.getDate())+"T"+p(end.getHours())+p(end.getMinutes())+"00";
+  const title=S.lang==="es"?"Estudiar: Code Jackpot ⚡":"Study: Code Jackpot ⚡";
+  const desc=(S.lang==="es"?"10 minutos de estudio para tu examen eléctrico. ":"10 minutes of study for your electrical exam. ")+location.href.split("#")[0];
+  const now=new Date().toISOString().replace(/[-:]/g,"").split(".")[0]+"Z";
+  const ics=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Code Jackpot//EN","BEGIN:VEVENT","UID:cj-"+S.pid+"@codejackpot","DTSTAMP:"+now,"DTSTART:"+dt,"DTEND:"+dte,"RRULE:FREQ=DAILY","SUMMARY:"+title,"DESCRIPTION:"+desc,"URL:"+location.href.split("#")[0],
+    "BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:"+title,"TRIGGER:PT0M","END:VALARM","END:VEVENT","END:VCALENDAR"].join("\r\n");
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([ics],{type:"text/calendar"}));a.download="code-jackpot-reminder.ics";document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);
+}
+
+function renderLearn(){renderReady();renderPath();renderReminders();renderGuide();}
+$("examModeBtn").onclick=examMenu;$("lookupModeBtn").onclick=lookupMenu;
+initPush();
+
 // ---------- Tabs ----------
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
   document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));
@@ -478,11 +774,13 @@ document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
   renderGuide();
   if(b.dataset.tab==="board")buildBoard();
   if(b.dataset.tab==="stats")stats();
+  if(b.dataset.tab==="learn")renderLearn();
   if(b.dataset.tab==="leaders"){loadLB(false);LB.poll=setInterval(()=>loadLB(true),60000);}
 });
 
 // ---------- Start ----------
 if(!S.exam){S.exam="06A";applyLang();pickExam(true);}else applyLang();
+if(!Object.keys(S.lessons||{}).length&&E().total<5)setTimeout(()=>toast(T("learnNudge"),3500),1200);
 // Leaderboard opens first
 loadLB(true);LB.poll=setInterval(()=>loadLB(true),60000);
 save();

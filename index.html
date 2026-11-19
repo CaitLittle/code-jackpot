@@ -143,6 +143,22 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bot
 .lbtoggle button.on{background:var(--gold);color:#2a1a00;border-color:transparent}
 .lbsort button.on{background:var(--volt);color:#04202a;border-color:transparent}
 .sheetrow{margin-top:10px}
+.tabs{gap:4px}.tabs button{font-size:12px;padding:9px 0}
+.rdy{display:flex;align-items:baseline;gap:10px}.rdyn{font-family:Bungee,sans-serif;font-size:34px}.rdyl{font-weight:800}
+.gauge{position:relative;height:14px;background:#0a0f20;border-radius:8px;overflow:hidden;margin:6px 0 2px}.gauge i{display:block;height:100%;width:0;transition:width .5s}.gauge b{position:absolute;left:70%;top:0;bottom:0;width:2px;background:#fff}
+.weakrow{display:flex;justify-content:space-between;align-items:center;font-size:13px;margin:5px 0}
+.mini{background:var(--panel2);color:var(--volt);border:1px solid var(--volt);border-radius:14px;padding:4px 12px;font-size:12px;font-weight:700}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.modebtn{background:linear-gradient(180deg,#2c1f5c,var(--panel));border:1px solid var(--gold);border-radius:14px;padding:12px 8px;color:var(--text);text-align:center}
+.modebtn b{display:block;font-size:14px;color:var(--gold)}.modebtn span{font-size:11px;color:var(--muted)}
+.unit{background:var(--panel2);border-radius:12px;margin-top:10px;padding:8px}
+.uhead{display:flex;align-items:center;gap:8px;font-weight:800;font-size:14px;margin-bottom:4px}.uhead .ut{flex:1}.uhead .uc{color:var(--muted);font-size:12px}
+.lrow{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:10px;margin:4px 0;font-size:14px}
+.lrow .lt{flex:1}.lrow .ls{font-size:11px;color:var(--muted)}.lrow.open{border-color:var(--gold)}.lrow.done .ls{color:var(--good)}.lrow.locked{opacity:.5}.lrow.safety .lt{color:#ffd27a}
+.lbody{font-size:15px;line-height:1.55}.lpar{margin:10px 0}.lbul{margin:4px 0 4px 14px;position:relative}.lbul:before{content:"•";position:absolute;left:-12px;color:var(--gold)}
+.exhead{display:flex;justify-content:space-between;font-weight:800;color:var(--muted);font-size:13px}#exClock,#lkClock{font-family:Bungee,sans-serif;color:var(--gold)}
+.exnav{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.opt.sel{border-color:var(--volt);background:#123a4a}
 .mission{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 10px;margin-bottom:10px;font-size:12px;display:flex;align-items:center;gap:8px}
 .mission b{color:var(--gold)}
 .mission .mt{flex:1}
@@ -177,6 +193,7 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bot
 
   <div class="tabs">
     <button data-tab="leaders" class="on" data-t="tabLeaders"></button>
+    <button data-tab="learn" data-t="tabLearn"></button>
     <button data-tab="slots" data-t="tabSlots"></button>
     <button data-tab="board" data-t="tabBoard"></button>
     <button data-tab="stats" data-t="tabStats"></button>
@@ -223,6 +240,13 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bot
     </div>
   </section>
 
+  <section id="learn">
+    <div class="card" id="readyCard"></div>
+    <div class="modes"><button class="modebtn" id="examModeBtn"><b data-t="examBtn"></b><span data-t="examBtnSub"></span></button><button class="modebtn" id="lookupModeBtn"><b data-t="lookupBtn"></b><span data-t="lookupBtnSub"></span></button></div>
+    <div class="card"><h3 data-t="pathTitle"></h3><div class="note" data-t="pathNote"></div><div class="note" id="pathCount" style="margin-top:6px;color:var(--gold)"></div><div id="pathList"></div></div>
+    <div class="card" id="remCard"></div>
+  </section>
+
   <section id="stats">
     <div class="card"><h3 data-t="accTopic"></h3><div id="catBars"></div>
       <div class="note" style="margin-top:8px" data-t="statsNote"></div></div>
@@ -241,6 +265,8 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bot
 
 <script src="config.js"></script>
 <script src="questions.js"></script>
+<script src="lessons.js"></script>
+<script src="extras.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
