@@ -1,5 +1,5 @@
 // Offline support. Bump VERSION whenever you change the game files so phones pick up the update.
-const VERSION = "cj-v7";
+const VERSION = "cj-v8";
 const FILES = ["./", "index.html", "app.js", "questions.js", "lessons.js", "extras.js", "config.js", "manifest.webmanifest", "icon.svg", "icon-192.png", "icon-512.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES))); self.skipWaiting(); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== VERSION).map(k => caches.delete(k))))); self.clients.claim(); });

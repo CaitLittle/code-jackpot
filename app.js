@@ -315,10 +315,31 @@ $("spinBtn").onclick=()=>{
   const res=[rnd(),rnd(),rnd()];
   if(Math.random()<0.25)res[2]=res[Math.floor(Math.random()*2)];
   const g=G();if(g.slotBoost){g.slotBoost=false;if(res[0]==="cash")res[0]=focus();res[1]=res[0];renderGuide();}
-  [0,1,2].forEach(i=>{$("r"+i).classList.remove("win");$("r"+i).classList.add("spin");});
-  const tick=setInterval(()=>[0,1,2].forEach(i=>{if($("r"+i).classList.contains("spin"))setReel(i,rnd());}),70);
-  [0,1,2].forEach(i=>setTimeout(()=>{$("r"+i).classList.remove("spin");setReel(i,res[i]);if(i===2){clearInterval(tick);resolve(res);}},700+i*450));
+  const STOP=[1800,2500,3200];let left=3;
+  [0,1,2].forEach(i=>{$("r"+i).classList.remove("win");spinReel(i,res[i],STOP[i],SY,()=>{if(--left===0)resolve(res);});});
 };
+function symHTML(k){return '<div class="cellr"><div class="sym">'+(k==="cash"?"💰":CATS[k].e)+'</div><div class="lab">'+(k==="cash"?(S.lang==="es"?"Bono":"Bonus"):cn(k))+'</div></div>';}
+function spinReel(i,result,dur,SY,done){
+  const r=$("r"+i),h=r.clientHeight||96;
+  const n=18+i*7,list=[reelState[i]];
+  for(let j=1;j<n;j++)list.push(SY[Math.floor(Math.random()*SY.length)]);
+  list.push(result);
+  const strip=document.createElement("div");strip.className="strip";
+  strip.innerHTML=list.map(symHTML).join("")+symHTML(SY[0]);
+  r.classList.add("spin");r.appendChild(strip);
+  const dist=(list.length-1)*h,t0=performance.now();
+  const over=14,blurEnd=0.55; // slows down like a real reel, nudges past, then settles back
+  const pos=p=>p<0.88?(1-Math.pow(1-p/0.88,3))*(dist+over):dist+over*(1-Math.sin((p-0.88)/0.12*Math.PI/2));
+  function step(now){
+    const p=Math.min(1,(now-t0)/dur);
+    const y=pos(p);
+    strip.style.transform="translateY("+(-y)+"px)";
+    strip.style.filter=p<blurEnd?"blur(1.2px)":"none";
+    if(p<1)requestAnimationFrame(step);
+    else{r.classList.remove("spin");strip.remove();setReel(i,result);r.classList.add("thunk");setTimeout(()=>r.classList.remove("thunk"),220);done();}
+  }
+  requestAnimationFrame(step);
+}
 function resolve(res){
   spinning=false;
   const cnt={};res.forEach(k=>cnt[k]=(cnt[k]||0)+1);
@@ -374,8 +395,8 @@ function roll(){
   if(rolling||S.spins<=0)return;rolling=true;S.spins--;save();hud();
   const a=1+Math.floor(Math.random()*6),b=1+Math.floor(Math.random()*6);
   $("d1").classList.add("roll");$("d2").classList.add("roll");
-  const t=setInterval(()=>{$("d1").textContent=FACES[Math.floor(Math.random()*6)];$("d2").textContent=FACES[Math.floor(Math.random()*6)];},80);
-  setTimeout(()=>{clearInterval(t);move(a+b,a===b,a,b);},700);
+  const t=setInterval(()=>{$("d1").textContent=FACES[Math.floor(Math.random()*6)];$("d2").textContent=FACES[Math.floor(Math.random()*6)];},130);
+  setTimeout(()=>{clearInterval(t);$("d1").textContent=FACES[a-1];$("d2").textContent=FACES[b-1];$("d1").classList.remove("roll");$("d2").classList.remove("roll");setTimeout(()=>move(a+b,a===b,a,b),450);},1300);
 }
 function move(steps,dbl,a,b){
   let n=0;const X=E();
@@ -384,7 +405,7 @@ function move(steps,dbl,a,b){
     if(X.pos===0&&n<steps){S.spins+=3;toast(T("passGo"));}
     buildBoard();$("d1").textContent=FACES[a-1];$("d2").textContent=FACES[b-1];
     if(n>=steps){clearInterval(hop);land(dbl);}
-  },160);
+  },450);
 }
 function land(dbl){
   const X=E(),s=SP[X.pos];

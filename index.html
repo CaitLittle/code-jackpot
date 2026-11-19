@@ -44,11 +44,14 @@ section.on{display:block}
 .machine{background:linear-gradient(180deg,#3a1d6e,#22124a);border-radius:22px;padding:16px 14px 18px;border:3px solid var(--gold);box-shadow:0 0 0 4px #5a2fa0,0 10px 30px #0008}
 .marquee{text-align:center;font-family:Bungee,sans-serif;color:var(--gold);font-size:15px;margin-bottom:10px;letter-spacing:2px}
 .reels{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;background:#0a0f20;padding:10px;border-radius:14px;border:2px solid #000}
-.reel{background:linear-gradient(180deg,#d9dff5,#fff 45%,#fff 55%,#c9d0ea);border-radius:10px;height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
+.reel{position:relative;background:linear-gradient(180deg,#d9dff5,#fff 45%,#fff 55%,#c9d0ea);border-radius:10px;height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
 .reel .sym{font-size:44px;line-height:1}
 .reel .lab{font-size:10px;color:#333a5c;font-weight:800;margin-top:4px;text-align:center;padding:0 2px}
-.reel.spin .sym{animation:blur .1s linear infinite}
-@keyframes blur{0%{transform:translateY(-8px);filter:blur(1px)}100%{transform:translateY(8px);filter:blur(1px)}}
+.reel.spin>.sym,.reel.spin>.lab{visibility:hidden}
+.reel .strip{position:absolute;left:0;right:0;top:0;will-change:transform}
+.reel .cellr{height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.reel.thunk{animation:thunk .22s ease-out}
+@keyframes thunk{0%{transform:translateY(3px)}100%{transform:none}}
 .reel.win{box-shadow:0 0 0 3px var(--gold),0 0 18px var(--gold)}
 .bigbtn{display:block;width:100%;margin-top:14px;padding:16px;border-radius:16px;font-family:Bungee,sans-serif;font-size:22px;color:#2a1a00;
   background:linear-gradient(180deg,#ffe07a,var(--gold2));box-shadow:0 6px 0 #b86a00;letter-spacing:2px}
@@ -65,8 +68,8 @@ section.on{display:block}
 .cell.own{border-color:var(--gold);background:linear-gradient(180deg,#3b3216,var(--panel))}
 .cell.own::after{content:"🏠";position:absolute;top:1px;right:2px;font-size:10px}
 .cell.special{background:linear-gradient(180deg,#2c1f5c,var(--panel))}
-.cell .tok{position:absolute;bottom:-4px;font-size:20px;filter:drop-shadow(0 2px 2px #000);animation:hop .35s}
-@keyframes hop{0%{transform:translateY(-10px)}100%{transform:none}}
+.cell .tok{position:absolute;bottom:-4px;font-size:20px;filter:drop-shadow(0 2px 2px #000);animation:hop .4s ease-out}
+@keyframes hop{0%{transform:translateY(0) scale(1)}45%{transform:translateY(-16px) scale(1.15)}100%{transform:none}}
 .center{grid-column:2/6;grid-row:2/6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:radial-gradient(circle,#24306a,#111833);border-radius:12px}
 .dice{display:flex;gap:10px}
 .die{width:52px;height:52px;background:#fff;color:#111;border-radius:12px;font-size:30px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 0 #9aa}
