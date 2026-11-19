@@ -58,7 +58,7 @@ en:{
   lbEmpty:"No scores yet. Answer a question to get on the board!",lbLoading:"Loading leaderboard…",
   lbOff:"The leaderboard isn't connected yet. Your progress still saves on this device.",
   lbErr:"Can't reach the leaderboard right now. Check your connection — your progress is saved.",
-  lbNeedNick:"Set a nickname below to show up on the leaderboard.",saved:"✔ Saved",
+  lbNeedNick:"Set a nickname below to show up on the leaderboard.",lbAccMin:"Accuracy only ranks players with {n}+ answers. Tap Coins to see everyone.",saved:"✔ Saved",
   verEn:"Ver en inglés",hideEn:"Hide English",
   mission:"<b>Daily mission:</b> {s}/{sn} 🎰 spins + {r}/{rn} 🎲 rolls → <b>+10 spins</b>",missionDone:"<b>✅ Daily mission done!</b> Come back tomorrow for a new one.",missionToast:"🎯 Daily mission complete! +10 spins",
   toBoardT:"Time to hit the Board!",toBoardP:"You've been spinning — now go build up your topics. <b>Your next roll pays 2×.</b>",toBoardGo:"🎲 Go to the Board",
@@ -102,7 +102,7 @@ es:{
   lbEmpty:"Todavía no hay puntajes. ¡Responde una pregunta para entrar a la tabla!",lbLoading:"Cargando la tabla…",
   lbOff:"La tabla de líderes todavía no está conectada. Tu progreso se sigue guardando en este dispositivo.",
   lbErr:"No se puede conectar con la tabla ahora. Revisa tu conexión — tu progreso está guardado.",
-  lbNeedNick:"Escribe un apodo abajo para aparecer en la tabla.",saved:"✔ Guardado",
+  lbAccMin:"Aciertos solo clasifica a jugadores con {n}+ respuestas. Toca Monedas para ver a todos.",lbNeedNick:"Escribe un apodo abajo para aparecer en la tabla.",saved:"✔ Guardado",
   verEn:"Ver en inglés",hideEn:"Ocultar inglés",
   mission:"<b>Misión diaria:</b> {s}/{sn} 🎰 giros + {r}/{rn} 🎲 tiros → <b>+10 giros</b>",missionDone:"<b>✅ ¡Misión diaria cumplida!</b> Regresa mañana por otra.",missionToast:"🎯 ¡Misión diaria cumplida! +10 giros",
   toBoardT:"¡Hora de ir al Tablero!",toBoardP:"Ya giraste bastante — ahora ve a construir tus temas. <b>Tu próximo tiro paga 2×.</b>",toBoardGo:"🎲 Ir al Tablero",
@@ -489,6 +489,7 @@ function renderLB(){
   let rows=LB.rows.map(r=>({nick:String(r.nick||"").slice(0,20),
     rank:Math.min(4,num(r.rank)),coins:num(W?r.wcoins:r.coins),right:num(W?r.wright:r.right),total:num(W?r.wtotal:r.total),focus:num(W?r.wfocusR:r.focusR),wk:String(r.wk||"")}))
     .filter(r=>r.nick&&(!W||r.wk===wk)&&r.total>0);
+  const before=rows.length;
   if(LB.sort==="acc"){const min=W?10:20;rows=rows.filter(r=>r.total>=min);rows.forEach(r=>r.acc=r.right/r.total);}
   rows.sort((a,b)=>(b[LB.sort]||0)-(a[LB.sort]||0));rows=rows.slice(0,25);
   rows.forEach((r,i)=>{
@@ -500,7 +501,7 @@ function renderLB(){
     d.children[2].textContent=LB.sort==="coins"?r.coins.toLocaleString()+" 💰":LB.sort==="focus"?r.focus+" "+CATS[focus()].e:Math.round(r.acc*100)+"%";
     list.appendChild(d);
   });
-  st.textContent=LB.status==="loading"?T("lbLoading"):LB.status==="err"?T("lbErr"):!S.nick?T("lbNeedNick"):!rows.length?T("lbEmpty"):"";
+  st.textContent=LB.status==="loading"?T("lbLoading"):LB.status==="err"?T("lbErr"):!S.nick?T("lbNeedNick"):!rows.length?(LB.sort==="acc"&&before?T("lbAccMin",{n:W?10:20}):T("lbEmpty")):"";
 }
 document.querySelectorAll(".lbsort button").forEach(b=>b.onclick=()=>{LB.sort=b.dataset.sort;renderLB();});
 document.querySelectorAll(".lbtoggle button").forEach(b=>b.onclick=()=>{LB.period=b.dataset.period;renderLB();});
