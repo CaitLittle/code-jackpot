@@ -129,6 +129,22 @@ section.on{display:block}
 .steps{margin:6px 0 0;padding-left:20px;font-size:13px;line-height:1.55}
 .steps li{margin-bottom:4px}
 
+.pieces .avbtn{font-size:26px;padding:8px 0}
+.startbtn{font-size:26px;padding:20px;margin-top:16px}
+.tutm{align-items:center;z-index:25}
+.tutsheet{border-radius:22px;border:3px solid var(--gold);margin:0 14px;text-align:center;padding:22px 18px 18px}
+.tutsheet .tstep{font-size:12px;font-weight:800;color:var(--volt);letter-spacing:.08em}
+.tutsheet .ticon{font-size:64px;line-height:1;margin:10px 0 6px;animation:tpop .35s ease-out}
+@keyframes tpop{from{transform:scale(.5);opacity:0}}
+.tutsheet .ttitle{font-family:Bungee,sans-serif;font-size:22px;color:var(--gold);margin:4px 0 8px}
+.tutsheet .ttext{font-size:16px;line-height:1.45;margin:0 0 10px}
+.tutsheet .tdots{display:flex;gap:6px;justify-content:center;margin:8px 0 4px}
+.tutsheet .tdots i{width:8px;height:8px;border-radius:50%;background:var(--line)}
+.tutsheet .tdots i.on{background:var(--gold)}
+.tutsheet .trow{display:flex;gap:8px;align-items:center}
+.tutsheet .trow .bigbtn{flex:1;margin-top:8px;font-size:18px;padding:12px}
+.tutsheet .tskip{background:none;border:0;color:var(--muted,#9aa4c8);font-size:14px;padding:10px;margin-top:8px}
+
 body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
 .topbar{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:2px}
 .exambtn{background:var(--panel);color:var(--gold);border:1px solid var(--gold);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:800}
@@ -282,9 +298,12 @@ body:not([data-theme="classic"]) .bigbtn{background:linear-gradient(180deg,var(-
       <div id="lbList"></div>
       <div class="note" id="lbStatus" style="margin-top:8px"></div>
     </div>
-    <div class="card"><h3 data-t="lbNick"></h3>
+    <div class="card" id="playerCard"><h3 data-t="lbNick"></h3>
       <div class="nickrow"><input id="nickIn" maxlength="20" autocomplete="off"><button id="nickBtn" data-t="lbSave"></button></div>
       <div class="note" style="margin-top:8px" data-t="lbNote"></div>
+      <h3 style="margin-top:14px" id="pieceTitle"></h3>
+      <div class="avatars pieces" id="pieceRow"></div>
+      <button class="bigbtn startbtn" id="startBtn" ></button>
     </div>
   </section>
 
@@ -310,6 +329,7 @@ body:not([data-theme="classic"]) .bigbtn{background:linear-gradient(180deg,var(-
   </section>
 </div>
 
+<div class="modal tutm" id="tutModal"><div class="sheet tutsheet" id="tutSheet"></div></div>
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
 <div class="toast" id="toast"></div>
 

@@ -166,6 +166,7 @@ function applyLang(){
   buildBoard();
   if($("stats").classList.contains("on"))stats();
   renderLB();
+  try{renderPieces();}catch(e){}
   renderLearn();
   hud();
 }
@@ -546,7 +547,7 @@ Object.assign(TXT.es,{
   remTitle:"🔔 Recordatorios diarios",remPush:"Activar notificaciones",remPushOn:"✔ Las notificaciones están activadas",remPushNo:"Las notificaciones están bloqueadas. Actívalas en la configuración de tu teléfono para este sitio.",
   remIos:"En iPhone, primero agrega el juego a tu pantalla de inicio y ábrelo desde ahí para activar las notificaciones.",
   remCal:"📅 Agregar un recordatorio diario a mi calendario",remTime:"Recordarme a las:",remCalNote:"Funciona en cualquier teléfono: abre tu calendario con un recordatorio diario para estudiar.",
-  learnNudge:"¿Eres nuevo? Empieza en la pestaña 📚 Aprender."
+  learnNudge:"¿Eres nuevo? Empieza en la pestaña 📚 Clases."
 });
 CATS.safety={e:"🦺",en:"Safety",es:"Seguridad",sen:"Safety",ses:"Seguridad"};
 if(CK.indexOf("safety")<0)CK.push("safety");
@@ -936,7 +937,7 @@ function renderLook(){
   box.appendChild(g);
   const l2=document.createElement("div");l2.className="note";l2.style.marginTop="10px";l2.textContent=T("lookAvatar");box.appendChild(l2);
   const a2=document.createElement("div");a2.className="avatars";
-  AVATARS.forEach(e=>{const b=document.createElement("button");b.className="avbtn"+(myToken()===e?" on":"");b.textContent=e;b.onclick=()=>{S.avatar=e;save();renderLook();buildBoard();};a2.appendChild(b);});
+  AVATARS.forEach(e=>{const b=document.createElement("button");b.className="avbtn"+(myToken()===e?" on":"");b.textContent=e;b.onclick=()=>{S.avatar=e;save();renderLook();renderPieces();buildBoard();};a2.appendChild(b);});
   box.appendChild(a2);
 }
 applyTheme();
@@ -1017,4 +1018,53 @@ if(!Object.keys(S.lessons||{}).length&&E().total<5)setTimeout(()=>toast(T("learn
 loadLB(true);LB.poll=setInterval(()=>loadLB(true),60000);
 save();
 if("serviceWorker" in navigator&&location.protocol==="https:"){navigator.serviceWorker.register("sw.js").catch(()=>{});}
+
+
+// ---------- Get started: game piece + tutorial ----------
+Object.assign(TXT.en,{pickPiece:"Pick your game piece",getStarted:"Get started",tutNext:"Next",tutBack:"Back",tutSkip:"Skip",tutGo:"Let's play!",tutStep:"STEP {n} OF {m}",
+  tut:[["📚","Learn first","Start on the Learn tab. Read a short lesson, then pass the 3-question check to unlock the next one."],
+       ["🎰","Spin the slots","Tap Spin. The reels pick your question topic. Answer right to win coins. Two or three matching symbols multiply your coins."],
+       ["🎲","Roll and build","On the Board tab, roll the dice to move your game piece. Spend your coins to build job sites and earn badges."],
+       ["🎯","Get exam ready","Exam Mode times you like the real test. Lookup Drill practices finding code fast. The Ready Meter shows when you're ready."],
+       ["🏆","Play every day","Ten minutes a day keeps your streak going and moves you up the leaderboard."]]});
+Object.assign(TXT.es,{pickPiece:"Elige tu ficha",getStarted:"Empezar",tutNext:"Siguiente",tutBack:"Atrás",tutSkip:"Saltar",tutGo:"¡A jugar!",tutStep:"PASO {n} DE {m}",
+  tut:[["📚","Primero aprende","Empieza en la pestaña Clases. Lee una lección corta y pasa la prueba de 3 preguntas para abrir la siguiente."],
+       ["🎰","Gira las ranuras","Toca Girar. Los carretes eligen el tema de tu pregunta. Responde bien para ganar monedas. Dos o tres símbolos iguales multiplican tus monedas."],
+       ["🎲","Tira y construye","En el Tablero, tira los dados para mover tu ficha. Gasta tus monedas para construir obras y ganar insignias."],
+       ["🎯","Prepárate para el examen","El Modo Examen te toma el tiempo como el examen real. El ejercicio de búsqueda te ayuda a encontrar el código rápido. El medidor te dice cuándo estás listo."],
+       ["🏆","Juega cada día","Diez minutos al día mantienen tu racha y te suben en la tabla."]]});
+function renderPieces(){
+  const row=$("pieceRow");if(!row)return;row.innerHTML="";
+  $("startBtn").textContent=T("getStarted");$("pieceTitle").textContent=T("pickPiece");
+  AVATARS.forEach(e=>{const b=document.createElement("button");b.className="avbtn"+(myToken()===e?" on":"");b.textContent=e;
+    b.onclick=()=>{S.avatar=e;save();renderPieces();renderLook();buildBoard();};row.appendChild(b);});
+  const pc=$("playerCard"),sec=$("leaders");
+  if(pc&&sec){if(!S.tut&&sec.firstElementChild!==pc)sec.insertBefore(pc,sec.firstElementChild);else if(S.tut&&sec.lastElementChild!==pc)sec.appendChild(pc);}
+}
+let tutI=0;
+function tutTxt(){const t=(TXT[S.lang]||TXT.en).tut;return t||TXT.en.tut;}
+function showTut(){
+  const steps=tutTxt(),st=steps[tutI],m=steps.length,last=tutI===m-1,box=$("tutSheet");
+  box.innerHTML='<div class="tstep"></div><div class="ticon"></div><div class="ttitle"></div><p class="ttext"></p><div class="tdots"></div><div class="trow"></div><button class="tskip"></button>';
+  box.querySelector(".tstep").textContent=T("tutStep",{n:tutI+1,m:m});
+  box.querySelector(".ticon").textContent=st[0];box.querySelector(".ttitle").textContent=st[1];box.querySelector(".ttext").textContent=st[2];
+  box.querySelector(".tdots").innerHTML=steps.map((_,i)=>'<i'+(i===tutI?' class="on"':'')+'></i>').join("");
+  const row=box.querySelector(".trow");
+  if(tutI>0){const bk=document.createElement("button");bk.className="bigbtn";bk.style.flex="0 0 34%";bk.style.filter="saturate(.3)";bk.textContent=T("tutBack");bk.onclick=()=>{tutI--;showTut();};row.appendChild(bk);}
+  const nx=document.createElement("button");nx.className="bigbtn";nx.id="tutNext";nx.textContent=last?T("tutGo"):T("tutNext");nx.onclick=()=>{if(last)endTut();else{tutI++;showTut();}};row.appendChild(nx);
+  const sk=box.querySelector(".tskip");sk.textContent=T("tutSkip");sk.style.visibility=last?"hidden":"";sk.onclick=endTut;
+  $("tutModal").classList.add("on");
+}
+function endTut(){
+  $("tutModal").classList.remove("on");S.tut=1;save();renderPieces();
+  const noLessons=!Object.keys(S.lessons||{}).length;
+  goTab(noLessons?"learn":"slots");
+}
+$("startBtn").onclick=()=>{
+  const v=$("nickIn").value.replace(/[<>]/g,"").trim().slice(0,20);
+  if(v&&v!==S.nick){S.nick=v;LB.lastSent="";save();try{pushScore();}catch(e){}renderLB();}
+  tutI=0;showTut();
+};
+renderPieces();
+
 })();
